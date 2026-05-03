@@ -1,0 +1,17 @@
+<resources>
+  <color name="splashscreen_background">#FFFFFF</color>
+  <color name="iconBackground">#E0F2FE</color>
+  <color name="colorPrimary">#023c69</color>
+  <color name="colorPrimaryDark">#ffffff</color>
+  <color name="widget_text_primary">#0F172A</color>
+  <color name="widget_text_muted">#334155</color>
+  <color name="widget_text_cool">#0E7490</color>
+  <color name="widget_text_analyze">#0E7490</color>
+  <color name="widget_analyze_icon_cool">#0891B2</color>
+  <color name="widget_analyze_icon_warm">#B45309</color>
+  <color name="widget_text_warm">#92400E</color>
+  <color name="widget_text_warm_dark">#B45309</color>
+  <color name="widget_btn_warm_text">#92400E</color>
+  <color name="notif_accent_cool">#0891B2</color>
+  <color name="notif_accent_warm">#D97706</color>
+</resources>

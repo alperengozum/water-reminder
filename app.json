@@ -2,9 +2,29 @@
   "expo": {
     "scheme": "acme",
     "plugins": [
-      "expo-router"
+      "expo-router",
+      "expo-font"
     ],
-    "name": "water-reminder",
-    "slug": "water-reminder"
+    "name": "Water Reminder",
+    "version": "1.0.0",
+    "slug": "water-reminder",
+    "icon": "./water.png",
+    "android": {
+      "package": "com.alperengozum.water",
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "foregroundImage": "./water.png",
+        "backgroundColor": "#E0F2FE"
+      }
+    },
+    "ios": {
+      "bundleIdentifier": "com.alperengozum.water",
+      "buildNumber": "1"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "46fbc4de-ab70-4bcc-b7cb-e28b38197f2c"
+      }
+    }
   }
 }

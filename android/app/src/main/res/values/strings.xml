@@ -1,0 +1,32 @@
+<resources>
+  <string name="app_name">Water Reminder</string>
+  <string name="widget_water_name">Water</string>
+  <string name="widget_water_description">Today\'s progress, 7-day pace, and quick add from your home screen.</string>
+  <string name="widget_title">Hydration</string>
+  <string name="widget_analyze_icon">◇</string>
+  <string name="widget_pct_badge">%1$d%%</string>
+  <string name="widget_primary_line">%1$d / %2$d ml · %3$d ml glass</string>
+  <string name="widget_analyze_line">7-day avg · %1$d ml</string>
+  <string name="widget_btn_glass">+%1$d ml</string>
+  <string name="widget_btn_quick">+100 ml</string>
+  <string name="widget_goal_reached">Goal reached</string>
+  <string name="notif_channel_name">Water Reminder</string>
+  <string name="notif_channel_desc">Today\'s progress and quick add from the notification</string>
+  <string name="notif_headline">Today\'s hydration</string>
+  <string name="notif_headline_complete">Daily goal reached</string>
+  <string name="notif_title">%1$d / %2$d ml</string>
+  <string name="notif_summary">%1$d%% · Glass %2$d ml</string>
+  <string name="notif_big_body_progress">About %1$d ml left to reach your goal.\nAdd a glass (%2$d ml) or +100 ml below.</string>
+  <string name="notif_big_body_complete">Nice work — you hit your goal.\nYou can still add more using the actions below.</string>
+  <string name="notif_action_glass">+%1$d ml</string>
+  <string name="notif_action_quick">+100 ml</string>
+  <!-- Widget picker preview (previewLayout only) -->
+  <string name="widget_preview_badge">65%</string>
+  <string name="widget_preview_primary">1,200 / 2,000 ml · 250 ml glass</string>
+  <string name="widget_preview_analyze">7-day avg · 1,850 ml</string>
+  <string name="widget_preview_btn_glass">+250 ml</string>
+  <string name="widget_preview_btn_quick">+100 ml</string>
+  <!-- Legacy strings (safe to remove if unused) -->
+  <string name="widget_water_line_primary">%1$d ml · Goal %2$d ml</string>
+  <string name="widget_water_line_secondary">%1$d%% · %2$d ml glass</string>
+</resources>
