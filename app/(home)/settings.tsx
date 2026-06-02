@@ -1,6 +1,6 @@
 import React from "react";
 import { Ionicons } from "@expo/vector-icons";
-import { Alert, Linking, Pressable, Platform, ScrollView, Switch, Text, View } from "react-native";
+import { Alert, AppState, Linking, Pressable, Platform, ScrollView, Switch, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect, useLocalSearchParams } from "expo-router";
 import { LogList } from "@/components/log-list";
@@ -100,6 +100,16 @@ export default function SettingsScreen() {
       checkNotificationsPermission().then(setNotifPermissionGranted);
     }, [reminderEnabled]),
   );
+
+  React.useEffect(() => {
+    if (!reminderEnabled) return;
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state === "active") {
+        checkNotificationsPermission().then(setNotifPermissionGranted);
+      }
+    });
+    return () => sub.remove();
+  }, [reminderEnabled]);
 
   // Reschedule whenever any reminder setting changes while enabled
   React.useEffect(() => {
