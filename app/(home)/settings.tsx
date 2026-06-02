@@ -1,17 +1,39 @@
 import React from "react";
-import { Pressable, Platform, ScrollView, Switch, Text, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { Alert, Linking, Pressable, Platform, ScrollView, Switch, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useLocalSearchParams } from "expo-router";
+import { useFocusEffect, useLocalSearchParams } from "expo-router";
 import { LogList } from "@/components/log-list";
 import { SectionCard } from "@/components/section-card";
 import { Stepper } from "@/components/stepper";
 import { impactLight, impactMedium } from "@/lib/haptics";
 import {
+  cancelWaterReminders,
+  checkNotificationsPermission,
+  requestNotificationsPermission,
+  scheduleWaterReminders,
+} from "@/lib/notifications";
+import {
   requestAndroidPostNotificationsPermission,
   setAndroidPersistentNotificationEnabled,
   syncAndroidWaterWidgetFromStore,
 } from "@/lib/widget";
-import { useWaterStore } from "@/store/use-water-store";
+import { useWaterStore, type QuickPreset } from "@/store/use-water-store";
+
+const DRINK_ICONS: string[] = [
+  "water-outline",
+  "cafe-outline",
+  "beer-outline",
+  "wine-outline",
+  "flask-outline",
+  "nutrition-outline",
+];
+
+function formatHour(hour: number): string {
+  const period = hour < 12 ? "AM" : "PM";
+  const h = hour % 12 || 12;
+  return `${h}:00 ${period}`;
+}
 
 export default function SettingsScreen() {
   const rawView = useLocalSearchParams<{ view?: string | string[] }>().view;
@@ -28,14 +50,62 @@ export default function SettingsScreen() {
   const setGlassMl = useWaterStore((state) => state.setGlassMl);
   const persistentNotificationEnabled = useWaterStore((state) => state.persistentNotificationEnabled);
   const setPersistentNotificationEnabled = useWaterStore((state) => state.setPersistentNotificationEnabled);
+  const glassIcon = useWaterStore((state) => state.glassIcon);
+  const setGlassIcon = useWaterStore((state) => state.setGlassIcon);
+  const presets = useWaterStore((state) => state.presets);
+  const setPresets = useWaterStore((state) => state.setPresets);
+  const reminderEnabled = useWaterStore((state) => state.reminderEnabled);
+  const reminderIntervalHours = useWaterStore((state) => state.reminderIntervalHours);
+  const reminderStartHour = useWaterStore((state) => state.reminderStartHour);
+  const reminderEndHour = useWaterStore((state) => state.reminderEndHour);
+  const setReminderEnabled = useWaterStore((state) => state.setReminderEnabled);
+  const setReminderIntervalHours = useWaterStore((state) => state.setReminderIntervalHours);
+  const setReminderStartHour = useWaterStore((state) => state.setReminderStartHour);
+  const setReminderEndHour = useWaterStore((state) => state.setReminderEndHour);
+
+  const updatePreset = React.useCallback(
+    (index: number, patch: Partial<QuickPreset>) => {
+      const next = presets.map((p, i) => (i === index ? { ...p, ...patch } : p));
+      setPresets(next);
+    },
+    [presets, setPresets],
+  );
+
+  const addPreset = React.useCallback(() => {
+    if (presets.length >= 4) return;
+    impactLight();
+    setPresets([...presets, { amountMl: 250 }]);
+  }, [presets, setPresets]);
+
+  const removePreset = React.useCallback(
+    (index: number) => {
+      impactMedium();
+      setPresets(presets.filter((_, i) => i !== index));
+    },
+    [presets, setPresets],
+  );
 
   const [recentLogsExpanded, setRecentLogsExpanded] = React.useState(false);
+  const [notifPermissionGranted, setNotifPermissionGranted] = React.useState(true);
 
   React.useEffect(() => {
     if (viewParam === "recent-logs") {
       setRecentLogsExpanded(true);
     }
   }, [viewParam]);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      if (!reminderEnabled) return;
+      checkNotificationsPermission().then(setNotifPermissionGranted);
+    }, [reminderEnabled]),
+  );
+
+  // Reschedule whenever any reminder setting changes while enabled
+  React.useEffect(() => {
+    if (!reminderEnabled) return;
+    void scheduleWaterReminders(reminderIntervalHours, reminderStartHour, reminderEndHour);
+  }, [reminderEnabled, reminderIntervalHours, reminderStartHour, reminderEndHour]);
 
   const insets = useSafeAreaInsets();
   const horizontalPad = 20;
@@ -54,6 +124,34 @@ export default function SettingsScreen() {
     impactLight();
     setRecentLogsExpanded((open) => !open);
   }, []);
+
+  const handleReminderToggle = React.useCallback(
+    async (next: boolean) => {
+      impactLight();
+      if (!next) {
+        setReminderEnabled(false);
+        await cancelWaterReminders();
+        return;
+      }
+      const granted = await requestNotificationsPermission();
+      if (!granted) {
+        setNotifPermissionGranted(false);
+        Alert.alert(
+          "Notifications blocked",
+          "Enable notifications for Water Reminder in your device settings to receive reminders.",
+          [
+            { text: "Not now", style: "cancel" },
+            { text: "Open Settings", onPress: () => Linking.openSettings() },
+          ],
+        );
+        return;
+      }
+      setNotifPermissionGranted(true);
+      setReminderEnabled(true);
+      await scheduleWaterReminders(reminderIntervalHours, reminderStartHour, reminderEndHour);
+    },
+    [reminderIntervalHours, reminderStartHour, reminderEndHour, setReminderEnabled],
+  );
 
   const onPersistentNotificationChange = React.useCallback(
     async (next: boolean) => {
@@ -103,6 +201,25 @@ export default function SettingsScreen() {
               setGoalGlasses(Math.max(1, goalGlasses - 1));
             }}
           />
+        </SectionCard>
+
+        <SectionCard variant="soft">
+          <Text
+            selectable
+            style={{
+              fontSize: 12,
+              fontWeight: "700",
+              letterSpacing: 0.6,
+              color: "#0891B2",
+              textTransform: "uppercase",
+            }}
+          >
+            Quick add
+          </Text>
+          <Text selectable style={{ fontSize: 18, fontWeight: "800", color: "#0F172A" }}>
+            Custom amounts
+          </Text>
+
           <Stepper
             label="Glass size"
             value={`${glassMl} ml`}
@@ -115,6 +232,242 @@ export default function SettingsScreen() {
               setGlassMl(Math.max(100, glassMl - 25));
             }}
           />
+          <View style={{ flexDirection: "row", gap: 8 }}>
+            {DRINK_ICONS.map((iconName) => {
+              const isSelected = glassIcon === iconName;
+              return (
+                <Pressable
+                  key={iconName}
+                  onPress={() => { impactLight(); setGlassIcon(isSelected ? undefined : iconName); }}
+                  style={({ pressed }) => ({
+                    width: 40, height: 40, borderRadius: 12, borderCurve: "continuous",
+                    backgroundColor: isSelected ? "#BFDBFE" : pressed ? "#E2E8F0" : "#F1F5F9",
+                    borderWidth: 1,
+                    borderColor: isSelected ? "#93C5FD" : "transparent",
+                    alignItems: "center", justifyContent: "center",
+                    transform: [{ scale: pressed ? 0.94 : 1 }],
+                  })}
+                >
+                  <Ionicons name={iconName as any} size={20} color={isSelected ? "#1D4ED8" : "#94A3B8"} />
+                </Pressable>
+              );
+            })}
+          </View>
+          <View style={{ height: 1, backgroundColor: "#E2E8F0" }} />
+
+          {presets.map((preset, index) => (
+            <View key={index} style={{ gap: 10 }}>
+              {index > 0 && (
+                <View style={{ height: 1, backgroundColor: "#E2E8F0", marginVertical: 2 }} />
+              )}
+
+              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                <Text selectable style={{ fontSize: 13, fontWeight: "600", color: "#64748B" }}>
+                  Preset {index + 1}
+                </Text>
+                <Pressable
+                  onPress={() => removePreset(index)}
+                  hitSlop={8}
+                  style={({ pressed }) => ({
+                    width: 28,
+                    height: 28,
+                    borderRadius: 999,
+                    backgroundColor: pressed ? "#FECACA" : "#FFE4E6",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    opacity: pressed ? 0.8 : 1,
+                  })}
+                >
+                  <Ionicons name="close" size={14} color="#BE123C" />
+                </Pressable>
+              </View>
+
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                <Pressable
+                  onPress={() => { impactLight(); updatePreset(index, { amountMl: Math.max(25, preset.amountMl - 25) }); }}
+                  style={({ pressed }) => ({
+                    width: 36, height: 36, borderRadius: 14, borderCurve: "continuous",
+                    backgroundColor: "#E2E8F0", alignItems: "center", justifyContent: "center",
+                    boxShadow: "0 6px 12px rgba(15, 23, 42, 0.06)",
+                    opacity: pressed ? 0.7 : 1,
+                  })}
+                >
+                  <Text style={{ fontSize: 18, fontWeight: "700", color: "#0F172A" }}>-</Text>
+                </Pressable>
+                <View style={{
+                  paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, borderCurve: "continuous",
+                  backgroundColor: "#F8FAFC", borderWidth: 1, borderColor: "#E2E8F0",
+                }}>
+                  <Text style={{ fontSize: 16, fontWeight: "800", color: "#0F172A", fontVariant: ["tabular-nums"] }}>
+                    {preset.amountMl} ml
+                  </Text>
+                </View>
+                <Pressable
+                  onPress={() => { impactLight(); updatePreset(index, { amountMl: preset.amountMl + 25 }); }}
+                  style={({ pressed }) => ({
+                    width: 36, height: 36, borderRadius: 14, borderCurve: "continuous",
+                    backgroundColor: pressed ? "#A5F3FC" : "#CFFAFE", alignItems: "center", justifyContent: "center",
+                    boxShadow: "0 8px 14px rgba(8, 145, 178, 0.16)",
+                  })}
+                >
+                  <Text style={{ fontSize: 18, fontWeight: "700", color: "#0E7490" }}>+</Text>
+                </Pressable>
+              </View>
+
+              <View style={{ flexDirection: "row", gap: 8 }}>
+                {DRINK_ICONS.map((iconName) => {
+                  const isSelected = preset.icon === iconName;
+                  return (
+                    <Pressable
+                      key={iconName}
+                      onPress={() => { impactLight(); updatePreset(index, { icon: isSelected ? undefined : iconName }); }}
+                      style={({ pressed }) => ({
+                        width: 40, height: 40, borderRadius: 12, borderCurve: "continuous",
+                        backgroundColor: isSelected ? "#FDE68A" : pressed ? "#E2E8F0" : "#F1F5F9",
+                        borderWidth: 1,
+                        borderColor: isSelected ? "#FBBF24" : "transparent",
+                        alignItems: "center", justifyContent: "center",
+                        transform: [{ scale: pressed ? 0.94 : 1 }],
+                      })}
+                    >
+                      <Ionicons name={iconName as any} size={20} color={isSelected ? "#D97706" : "#94A3B8"} />
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </View>
+          ))}
+
+          {presets.length < 4 && (
+            <Pressable
+              onPress={addPreset}
+              style={({ pressed }) => ({
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 6,
+                paddingVertical: 11,
+                borderRadius: 999,
+                borderCurve: "continuous",
+                borderWidth: 1,
+                borderColor: pressed ? "#BAE6FD" : "#E2E8F0",
+                backgroundColor: pressed ? "#E0F2FE" : "#F8FAFC",
+                marginTop: presets.length > 0 ? 4 : 0,
+              })}
+            >
+              <Ionicons name="add-circle-outline" size={16} color="#0891B2" />
+              <Text style={{ fontSize: 13, fontWeight: "700", color: "#0891B2" }}>
+                Add preset
+              </Text>
+            </Pressable>
+          )}
+        </SectionCard>
+
+        <SectionCard variant="soft">
+          <View style={{ gap: 6 }}>
+            <Text
+              selectable
+              style={{
+                fontSize: 12,
+                fontWeight: "700",
+                letterSpacing: 0.6,
+                color: "#0891B2",
+                textTransform: "uppercase",
+              }}
+            >
+              Reminders
+            </Text>
+            <Text selectable style={{ fontSize: 18, fontWeight: "800", color: "#0F172A" }}>
+              Drink reminders
+            </Text>
+            <Text selectable style={{ fontSize: 14, lineHeight: 20, color: "#64748B" }}>
+              Get a nudge at set intervals so you don't forget to drink.
+            </Text>
+          </View>
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 16,
+              paddingTop: 4,
+            }}
+          >
+            <Text selectable style={{ flex: 1, fontSize: 15, fontWeight: "600", color: "#334155" }}>
+              On
+            </Text>
+            <Switch
+              accessibilityLabel="Drink reminders"
+              value={reminderEnabled}
+              onValueChange={handleReminderToggle}
+              trackColor={{ false: "#CBD5E1", true: "#99F6E4" }}
+              thumbColor={reminderEnabled ? "#0D9488" : "#F1F5F9"}
+            />
+          </View>
+          {reminderEnabled && !notifPermissionGranted && (
+            <Pressable
+              onPress={() => Linking.openSettings()}
+              style={({ pressed }) => ({
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 8,
+                paddingHorizontal: 12,
+                paddingVertical: 10,
+                borderRadius: 12,
+                borderCurve: "continuous",
+                backgroundColor: pressed ? "#FDE68A" : "#FEF3C7",
+                borderWidth: 1,
+                borderColor: "#FCD34D",
+              })}
+            >
+              <Ionicons name="warning-outline" size={16} color="#B45309" />
+              <Text style={{ flex: 1, fontSize: 13, fontWeight: "600", color: "#92400E" }}>
+                Notifications are blocked — tap to open Settings
+              </Text>
+              <Ionicons name="chevron-forward" size={14} color="#B45309" />
+            </Pressable>
+          )}
+          {reminderEnabled && (
+            <>
+              <View style={{ height: 1, backgroundColor: "#E2E8F0" }} />
+              <Stepper
+                label="Every"
+                value={`${reminderIntervalHours} ${reminderIntervalHours === 1 ? "hour" : "hours"}`}
+                onIncrement={() => {
+                  impactLight();
+                  setReminderIntervalHours(Math.min(4, reminderIntervalHours + 1));
+                }}
+                onDecrement={() => {
+                  impactLight();
+                  setReminderIntervalHours(Math.max(1, reminderIntervalHours - 1));
+                }}
+              />
+              <Stepper
+                label="From"
+                value={formatHour(reminderStartHour)}
+                onIncrement={() => {
+                  impactLight();
+                  setReminderStartHour(Math.min(reminderEndHour - reminderIntervalHours, reminderStartHour + 1));
+                }}
+                onDecrement={() => {
+                  impactLight();
+                  setReminderStartHour(Math.max(0, reminderStartHour - 1));
+                }}
+              />
+              <Stepper
+                label="Until"
+                value={formatHour(reminderEndHour)}
+                onIncrement={() => {
+                  impactLight();
+                  setReminderEndHour(Math.min(23, reminderEndHour + 1));
+                }}
+                onDecrement={() => {
+                  impactLight();
+                  setReminderEndHour(Math.max(reminderStartHour + reminderIntervalHours, reminderEndHour - 1));
+                }}
+              />
+            </>
+          )}
         </SectionCard>
 
         {Platform.OS === "android" ? (
