@@ -1,6 +1,6 @@
 import React from "react";
 import { Ionicons } from "@expo/vector-icons";
-import { Platform, Pressable, Text, UIManager, View } from "react-native";
+import { AppState, Platform, Pressable, Text, UIManager, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { MetricCard } from "@/components/metric-card";
@@ -14,7 +14,7 @@ import { formatGlasses, formatMl } from "@/lib/format";
 import { computeStreak } from "@/lib/streak";
 import { impactMedium, notifySuccess } from "@/lib/haptics";
 import { cancelWaterReminders, scheduleWaterReminders } from "@/lib/notifications";
-import { flushWidgetPendingAdds, syncAndroidWaterWidgetFromStore } from "@/lib/widget";
+import { flushWidgetPendingAdds, setAndroidAppIconComplete, syncAndroidWaterWidgetFromStore } from "@/lib/widget";
 import { useWaterStore, waitForWaterStoreHydration } from "@/store/use-water-store";
 
 export default function HomeScreen() {
@@ -58,16 +58,20 @@ export default function HomeScreen() {
   const todayGlasses = todayMl / glassMl;
   const isComplete = todayMl >= goalMl && goalMl > 0;
 
+  // 0–1 fraction of the reminder window elapsed; null when outside the window or complete
+  const windowProgress = React.useMemo(() => {
+    if (isComplete || !reminderEnabled) return null;
+    const hour = new Date().getHours() + new Date().getMinutes() / 60;
+    if (hour <= reminderStartHour || hour >= reminderEndHour) return null;
+    return (hour - reminderStartHour) / (reminderEndHour - reminderStartHour);
+  }, [isComplete, reminderEnabled, reminderStartHour, reminderEndHour]);
+
   // Glasses behind schedule: positive = behind, negative = ahead
   const pacingBehindGlasses = React.useMemo(() => {
-    if (isComplete) return 0;
-    const now = new Date();
-    const hour = now.getHours() + now.getMinutes() / 60;
-    if (hour <= reminderStartHour || hour >= reminderEndHour) return 0;
-    const windowProgress = (hour - reminderStartHour) / (reminderEndHour - reminderStartHour);
+    if (windowProgress === null) return 0;
     const expectedMl = windowProgress * goalMl;
     return (expectedMl - todayMl) / glassMl;
-  }, [isComplete, todayMl, goalMl, glassMl, reminderStartHour, reminderEndHour]);
+  }, [windowProgress, todayMl, goalMl, glassMl]);
 
   const hoursLeftInWindow = React.useMemo(() => {
     if (!reminderEnabled) return null;
@@ -206,6 +210,24 @@ export default function HomeScreen() {
     };
   }, [todayMl, goalMl, glassMl, weeklyPaceMl, logs]);
 
+  React.useEffect(() => {
+    if (Platform.OS !== "android") return;
+    setAndroidAppIconComplete(isComplete);
+  }, [isComplete]);
+
+  React.useEffect(() => {
+    if (Platform.OS !== "android") return;
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state === "active") {
+        const { logs: l, goalMl: g } = useWaterStore.getState();
+        const dk = getDayKey(new Date());
+        const ml = l.filter((log) => getDayKey(new Date(log.timestamp)) === dk).reduce((s, log) => s + log.amountMl, 0);
+        setAndroidAppIconComplete(ml >= g && g > 0);
+      }
+    });
+    return () => sub.remove();
+  }, []);
+
   const horizontalPad = 20;
   const columnGap = 12;
 
@@ -324,6 +346,7 @@ export default function HomeScreen() {
               consumedMl={todayMl}
               goalMl={goalMl}
               glassMl={glassMl}
+              pacingProgress={windowProgress ?? undefined}
               quickAdd={{
                 glassLabel: `${glassMl} ml`,
                 glassIcon,
@@ -348,6 +371,28 @@ export default function HomeScreen() {
           <UndoToast label={undoEntry.label} onUndo={handleUndo} isComplete={isComplete} />
         </View>
       )}
+
+      <Pressable
+        onPress={() => router.push("/history")}
+        hitSlop={12}
+        style={({ pressed }) => ({
+          position: "absolute",
+          bottom: Math.max(insets.bottom, 12) + 16,
+          left: horizontalPad,
+          width: 48,
+          height: 48,
+          borderRadius: 24,
+          backgroundColor: isComplete ? "#FEF3C7" : "#ECFEFF",
+          alignItems: "center",
+          justifyContent: "center",
+          boxShadow: "0 4px 12px rgba(8, 145, 178, 0.18)",
+          opacity: pressed ? 0.7 : 1,
+        })}
+        accessibilityLabel="History"
+        accessibilityRole="button"
+      >
+        <Ionicons name="bar-chart-outline" size={22} color={heroKicker} />
+      </Pressable>
 
       <Pressable
         onPress={() => router.push("/settings")}

@@ -9,6 +9,8 @@ type ProgressWidgetProps = {
   consumedMl: number;
   goalMl: number;
   glassMl: number;
+  /** 0–1 fraction of the reminder window elapsed; renders a pace marker when set */
+  pacingProgress?: number;
   quickAdd?: {
     glassLabel: string;
     glassIcon?: string;
@@ -18,7 +20,7 @@ type ProgressWidgetProps = {
   };
 };
 
-export function ProgressWidget({ consumedMl, goalMl, glassMl, quickAdd }: ProgressWidgetProps) {
+export function ProgressWidget({ consumedMl, goalMl, glassMl, pacingProgress, quickAdd }: ProgressWidgetProps) {
   const { width } = useWindowDimensions();
   const trackWidth = Math.max(240, width - 72);
   const progress = Math.min(consumedMl / goalMl, 1);
@@ -52,26 +54,41 @@ export function ProgressWidget({ consumedMl, goalMl, glassMl, quickAdd }: Progre
           </Text>
         </View>
       </View>
-      <View
-        style={{
-          height: 14,
-          width: trackWidth,
-          borderRadius: 999,
-          borderCurve: "continuous",
-          backgroundColor: isComplete ? "#FEF9C3" : "#CFFAFE",
-          overflow: "hidden",
-          boxShadow: isComplete ? "0 10px 18px rgba(234, 179, 8, 0.25)" : "none",
-        }}
-      >
+      <View style={{ position: "relative" }}>
         <View
           style={{
-            width: trackWidth * progress,
             height: 14,
+            width: trackWidth,
             borderRadius: 999,
             borderCurve: "continuous",
-            backgroundColor: isComplete ? "#FBBF24" : "#22D3EE",
+            backgroundColor: isComplete ? "#FEF9C3" : "#CFFAFE",
+            overflow: "hidden",
+            boxShadow: isComplete ? "0 10px 18px rgba(234, 179, 8, 0.25)" : "none",
           }}
-        />
+        >
+          <View
+            style={{
+              width: trackWidth * progress,
+              height: 14,
+              borderRadius: 999,
+              borderCurve: "continuous",
+              backgroundColor: isComplete ? "#FBBF24" : "#22D3EE",
+            }}
+          />
+        </View>
+        {pacingProgress !== undefined && !isComplete && (
+          <View
+            style={{
+              position: "absolute",
+              left: Math.max(1, Math.min(trackWidth - 3, trackWidth * pacingProgress - 1)),
+              top: -3,
+              width: 2,
+              height: 20,
+              borderRadius: 1,
+              backgroundColor: "rgba(14, 116, 144, 0.55)",
+            }}
+          />
+        )}
       </View>
       {isComplete ? (
         <View

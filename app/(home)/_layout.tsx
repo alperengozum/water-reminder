@@ -17,6 +17,15 @@ export default function HomeLayout() {
           headerTintColor: "#0891B2",
         }}
       />
+      <Stack.Screen
+        name="history"
+        options={{
+          title: "History",
+          headerShown: true,
+          headerBackTitle: "Water",
+          headerTintColor: "#0891B2",
+        }}
+      />
     </Stack>
   );
 }
