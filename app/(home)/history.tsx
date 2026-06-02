@@ -115,7 +115,10 @@ export default function HistoryScreen() {
   const insets = useSafeAreaInsets();
   const horizontalPad = 20;
   const cellGap = 4;
-  const cellSize = Math.floor((width - horizontalPad * 2 - cellGap * 6) / 7);
+  const sectionCardPadding = 16;
+  const cellSize = Math.floor(
+    (width - horizontalPad * 2 - sectionCardPadding * 2 - cellGap * 6) / 7,
+  );
 
   const dailyTotals = React.useMemo(() => computeDailyTotals(logs), [logs]);
 
@@ -192,7 +195,16 @@ export default function HistoryScreen() {
     }
   }, [isCurrentMonth, viewMonth]);
 
-  const chartMax = Math.max(100, goalMl * 1.1, ...last30.map((d) => d.value));
+  const { chartStepValue, chartSections } = React.useMemo(() => {
+    const rawMax = Math.max(100, goalMl * 1.1, ...last30.map((d) => d.value));
+    const rawStep = rawMax / 5;
+    const magnitude = Math.pow(10, Math.floor(Math.log10(Math.max(rawStep, 1))));
+    const normalized = rawStep / magnitude;
+    const niceFactor = [1, 2, 2.5, 5, 10].find((f) => f >= normalized) ?? 10;
+    const stepValue = niceFactor * magnitude;
+    const sections = Math.ceil(rawMax / stepValue);
+    return { chartStepValue: stepValue, chartSections: sections };
+  }, [last30, goalMl]);
 
   return (
     <ScrollView
@@ -378,7 +390,9 @@ export default function HistoryScreen() {
             yAxisThickness={0}
             xAxisThickness={0}
             hideRules
-            maxValue={chartMax}
+            stepValue={chartStepValue}
+            noOfSections={chartSections}
+            yAxisLabelSuffix=" ml"
             showReferenceLine1
             referenceLine1Position={goalMl}
             referenceLine1Config={{
