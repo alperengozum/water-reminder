@@ -1,5 +1,7 @@
 package com.alperengozum.water
 
+import android.content.ComponentName
+import android.content.pm.PackageManager
 import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReactContextBaseJavaModule
@@ -14,7 +16,14 @@ class WaterWidgetModule(private val reactContext: ReactApplicationContext) :
   /** Legacy arity (3) — kept for older dev builds / TurboModule descriptor cache; weekly pace defaults to 0. */
   @ReactMethod
   fun updateWidget(todayMl: Double, goalMl: Double, glassMl: Double) {
-    WaterWidgetUpdater.saveAndRefresh(reactContext, todayMl, goalMl, glassMl, 0.0)
+    WaterWidgetUpdater.saveAndRefresh(
+      reactContext,
+      todayMl,
+      goalMl,
+      glassMl,
+      0.0,
+      snapshotDayKey = WaterWidgetStorage.localDayKeyNow(),
+    )
   }
 
   /** Preferred: single map avoids arity mismatches when extending payload. */
@@ -29,7 +38,21 @@ class WaterWidgetModule(private val reactContext: ReactApplicationContext) :
         else -> 0.0
       }
     val dayTotalsJson = weeklyDayTotalsToJson(config)
-    WaterWidgetUpdater.saveAndRefresh(reactContext, todayMl, goalMl, glassMl, weeklyPaceMl, dayTotalsJson)
+    val snapshotDayKey =
+      when {
+        config.hasKey("dayKey") && !config.isNull("dayKey") ->
+          config.getString("dayKey") ?: WaterWidgetStorage.localDayKeyNow()
+        else -> WaterWidgetStorage.localDayKeyNow()
+      }
+    WaterWidgetUpdater.saveAndRefresh(
+      reactContext,
+      todayMl,
+      goalMl,
+      glassMl,
+      weeklyPaceMl,
+      dayTotalsJson,
+      snapshotDayKey,
+    )
   }
 
   private fun weeklyDayTotalsToJson(config: ReadableMap): String? {
@@ -54,6 +77,18 @@ class WaterWidgetModule(private val reactContext: ReactApplicationContext) :
       enabled -> WaterPersistentNotification.refresh(app)
       else -> WaterPersistentNotification.cancel(app)
     }
+  }
+
+  @ReactMethod
+  fun setIconComplete(isComplete: Boolean) {
+    val ctx = reactContext.applicationContext
+    val pm = ctx.packageManager
+    val pkg = ctx.packageName
+    val defaultComp = ComponentName(pkg, "$pkg.MainActivityDefault")
+    val completeComp = ComponentName(pkg, "$pkg.MainActivityComplete")
+    val (enable, disable) = if (isComplete) completeComp to defaultComp else defaultComp to completeComp
+    pm.setComponentEnabledSetting(enable, PackageManager.COMPONENT_ENABLED_STATE_ENABLED, PackageManager.DONT_KILL_APP)
+    pm.setComponentEnabledSetting(disable, PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP)
   }
 
   /** JSON array: `[{ "amountMl", "source", "timestamp" }, ...]` */

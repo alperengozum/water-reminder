@@ -10,11 +10,12 @@ function normalizeParam(value: string | string[] | undefined): string | undefine
 }
 
 export default function WidgetDeepLinkScreen() {
-  const { action } = useLocalSearchParams<{ action?: string | string[] }>();
+  const { action, amount } = useLocalSearchParams<{ action?: string | string[]; amount?: string | string[] }>();
 
   React.useEffect(() => {
     const ac = new AbortController();
     const raw = normalizeParam(action);
+    const rawAmount = normalizeParam(amount);
 
     void waitForWaterStoreHydration().then(() => {
       if (ac.signal.aborted) {
@@ -24,9 +25,16 @@ export default function WidgetDeepLinkScreen() {
         case "add-glass":
           useWaterStore.getState().addGlass();
           break;
-        case "add-quick":
-          useWaterStore.getState().addCustom(100);
+        case "add-quick": {
+          const ml = rawAmount ? Math.round(Number(rawAmount)) : 0;
+          if (ml > 0) {
+            useWaterStore.getState().addCustom(ml);
+          } else {
+            const { presets } = useWaterStore.getState();
+            useWaterStore.getState().addCustom(presets?.[0]?.amountMl ?? 100);
+          }
           break;
+        }
         case "analyze":
         default:
           break;
@@ -37,7 +45,7 @@ export default function WidgetDeepLinkScreen() {
     });
 
     return () => ac.abort();
-  }, [action]);
+  }, [action, amount]);
 
   return null;
 }

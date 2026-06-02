@@ -29,4 +29,15 @@
   <!-- Legacy strings (safe to remove if unused) -->
   <string name="widget_water_line_primary">%1$d ml · Goal %2$d ml</string>
   <string name="widget_water_line_secondary">%1$d%% · %2$d ml glass</string>
+  <!-- Compact launcher widget (picker name + preview) -->
+  <string name="widget_compact_name">Water (compact)</string>
+  <string name="widget_compact_description">Circular progress and one-tap log on your home screen.</string>
+  <string name="widget_compact_header_water">WATER</string>
+  <string name="widget_compact_pct">%1$d%%</string>
+  <string name="widget_compact_btn_log">+ Log</string>
+  <string name="widget_compact_status_empty">Empty</string>
+  <string name="widget_compact_status_progress">Keep going</string>
+  <string name="widget_compact_status_goal">Goal reached</string>
+  <string name="widget_compact_preview_pct">65%</string>
+  <string name="widget_compact_preview_status">Keep going</string>
 </resources>

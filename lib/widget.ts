@@ -6,8 +6,12 @@ type WaterWidgetPayload = {
   todayMl: number;
   goalMl: number;
   glassMl: number;
+  glassIcon?: string;
   weeklyPaceMl: number;
+  /** Local calendar yyyy-MM-dd; must match today's logs bucket in getDayKey. */
+  dayKey: string;
   weeklyDayTotals?: Record<string, number>;
+  presets?: Array<{ amountMl: number; icon?: string }>;
 };
 
 type WaterWidgetNativeModule = {
@@ -15,6 +19,7 @@ type WaterWidgetNativeModule = {
   updateWidget?: (todayMl: number, goalMl: number, glassMl: number) => void;
   consumePendingWidgetAdds?: () => Promise<string>;
   setPersistentNotificationEnabled?: (enabled: boolean) => void;
+  setIconComplete?: (isComplete: boolean) => void;
 };
 
 const moduleRef = NativeModules.WaterWidget as WaterWidgetNativeModule | undefined;
@@ -56,6 +61,9 @@ export function updateWaterWidget(
   glassMl: number,
   weeklyPaceMl: number,
   weeklyDayTotals?: Record<string, number>,
+  dayKey: string = getDayKey(new Date()),
+  glassIcon?: string,
+  presets?: Array<{ amountMl: number; icon?: string }>,
 ) {
   if (process.env.EXPO_OS !== "android") {
     return;
@@ -64,10 +72,10 @@ export function updateWaterWidget(
     return;
   }
   if (moduleRef.syncWidget) {
-    const payload: WaterWidgetPayload = { todayMl, goalMl, glassMl, weeklyPaceMl };
-    if (weeklyDayTotals !== undefined) {
-      payload.weeklyDayTotals = weeklyDayTotals;
-    }
+    const payload: WaterWidgetPayload = { todayMl, goalMl, glassMl, weeklyPaceMl, dayKey };
+    if (weeklyDayTotals !== undefined) payload.weeklyDayTotals = weeklyDayTotals;
+    if (glassIcon !== undefined) payload.glassIcon = glassIcon;
+    if (presets !== undefined) payload.presets = presets;
     moduleRef.syncWidget(payload);
     return;
   }
@@ -114,12 +122,12 @@ export function syncAndroidWaterWidgetFromStore(): void {
   if (process.env.EXPO_OS !== "android") {
     return;
   }
-  const { logs, goalMl, glassMl } = useWaterStore.getState();
+  const { logs, goalMl, glassMl, glassIcon, presets } = useWaterStore.getState();
   const dayKey = getDayKey(new Date());
   const todayMl = todayMlFromLogs(logs, dayKey);
   const weeklyPaceMl = weeklyPaceFromLogs(logs);
   const weeklyDayTotals = weeklyDayTotalsFromLogs(logs);
-  updateWaterWidget(todayMl, goalMl, glassMl, weeklyPaceMl, weeklyDayTotals);
+  updateWaterWidget(todayMl, goalMl, glassMl, weeklyPaceMl, weeklyDayTotals, dayKey, glassIcon, presets);
 }
 
 export function setAndroidPersistentNotificationEnabled(enabled: boolean): void {
@@ -127,6 +135,13 @@ export function setAndroidPersistentNotificationEnabled(enabled: boolean): void 
     return;
   }
   moduleRef?.setPersistentNotificationEnabled?.(enabled);
+}
+
+export function setAndroidAppIconComplete(isComplete: boolean): void {
+  if (process.env.EXPO_OS !== "android") {
+    return;
+  }
+  moduleRef?.setIconComplete?.(isComplete);
 }
 
 export async function requestAndroidPostNotificationsPermission(): Promise<boolean> {

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="22dp"
+    android:height="22dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+  <!-- Filled drop — heroKicker accent -->
+  <path
+      android:fillColor="@color/widget_compact_drop_outline"
+      android:pathData="M12,5.25c0,0,-4.2,5.6,-4.2,9.1a4.2,4.2,0,1,0,8.4,0c0,-3.5,-4.2,-9.1,-4.2,-9.1z" />
+</vector>

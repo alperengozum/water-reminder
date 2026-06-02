@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+  <item android:id="@android:id/background">
+    <shape
+        android:shape="ring"
+        android:innerRadiusRatio="4.2"
+        android:thicknessRatio="12"
+        android:useLevel="false">
+      <solid android:color="@color/widget_compact_ring_track_warm" />
+    </shape>
+  </item>
+  <item android:id="@android:id/progress">
+    <rotate
+        android:fromDegrees="-90"
+        android:pivotX="50%"
+        android:pivotY="50%"
+        android:toDegrees="-90">
+      <shape
+          android:shape="ring"
+          android:innerRadiusRatio="4.2"
+          android:thicknessRatio="12"
+          android:useLevel="true">
+        <solid android:color="@color/widget_compact_ring_fill_warm" />
+      </shape>
+    </rotate>
+  </item>
+</layer-list>

@@ -1,6 +1,7 @@
 <resources>
   <color name="splashscreen_background">#FFFFFF</color>
   <color name="iconBackground">#E0F2FE</color>
+  <color name="iconBackgroundComplete">#FBBF24</color>
   <color name="colorPrimary">#023c69</color>
   <color name="colorPrimaryDark">#ffffff</color>
   <color name="widget_text_primary">#0F172A</color>
@@ -14,4 +15,18 @@
   <color name="widget_btn_warm_text">#92400E</color>
   <color name="notif_accent_cool">#0891B2</color>
   <color name="notif_accent_warm">#D97706</color>
+  <!-- Compact widget — same palette as app/(home) + components/progress-widget + quick-add-row -->
+  <color name="widget_compact_primary">#BAE6FD</color>
+  <color name="widget_compact_icon_bg">#CFFAFE</color>
+  <color name="widget_compact_title">#0F172A</color>
+  <color name="widget_compact_pct">#0F172A</color>
+  <color name="widget_compact_status">#64748B</color>
+  <color name="widget_compact_ring_track">#CFFAFE</color>
+  <color name="widget_compact_ring_fill">#22D3EE</color>
+  <color name="widget_compact_ring_fill_warm">#FBBF24</color>
+  <color name="widget_compact_ring_track_warm">#FEF9C3</color>
+  <color name="widget_compact_log_text">#0C4A6E</color>
+  <color name="widget_compact_log_btn_warm">#FED7AA</color>
+  <color name="widget_compact_log_text_warm">#9A3412</color>
+  <color name="widget_compact_drop_outline">#0891B2</color>
 </resources>

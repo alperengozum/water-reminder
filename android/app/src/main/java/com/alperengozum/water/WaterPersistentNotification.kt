@@ -25,30 +25,13 @@ object WaterPersistentNotification {
       return
     }
     ensureChannel(app)
-    val snapshot = WaterWidgetStorage.read(app)
-    val pendingSum = WaterWidgetStorage.pendingAmountSum(app)
-    val todayMl = snapshot.todayMl + pendingSum
-    val goalMl = snapshot.goalMl
-    val glassMl = snapshot.glassMl
-    val todayInt = todayMl.toInt()
-    val goalInt = goalMl.toInt().coerceAtLeast(0)
-    val glassInt = glassMl.toInt().coerceAtLeast(1)
-    val pct =
-      when {
-        goalMl <= 0f -> 0
-        else -> ((todayMl / goalMl) * 100f).toInt().coerceIn(0, 100)
-      }
-    val isComplete = goalMl > 0f && todayMl >= goalMl
-    val remainingMl = (goalMl - todayMl).toInt().coerceAtLeast(0)
-
-    val goalForBar = goalInt.coerceAtLeast(1)
-    val progressValue = todayInt.coerceIn(0, goalForBar)
+    val m = WaterWidgetStorage.computeDisplayMetrics(app, WaterWidgetStorage.read(app))
 
     val accentColor =
       ContextCompat.getColor(
         app,
         when {
-          isComplete -> R.color.notif_accent_warm
+          m.isComplete -> R.color.notif_accent_warm
           else -> R.color.notif_accent_cool
         },
       )
@@ -56,16 +39,16 @@ object WaterPersistentNotification {
     val headline =
       app.getString(
         when {
-          isComplete -> R.string.notif_headline_complete
+          m.isComplete -> R.string.notif_headline_complete
           else -> R.string.notif_headline
         },
       )
-    val title = app.getString(R.string.notif_title, todayInt, goalInt)
-    val summary = app.getString(R.string.notif_summary, pct, glassInt)
+    val title = app.getString(R.string.notif_title, m.todayInt, m.goalInt)
+    val summary = app.getString(R.string.notif_summary, m.pct, m.glassInt)
     val bigBody =
       when {
-        isComplete -> app.getString(R.string.notif_big_body_complete)
-        else -> app.getString(R.string.notif_big_body_progress, remainingMl, glassInt)
+        m.isComplete -> app.getString(R.string.notif_big_body_complete)
+        else -> app.getString(R.string.notif_big_body_progress, m.remainingMl, m.glassInt)
       }
 
     val openIntent =
@@ -98,7 +81,7 @@ object WaterPersistentNotification {
         .setBigContentTitle(title)
         .bigText(bigBody)
 
-    val glassActionTitle = app.getString(R.string.notif_action_glass, glassInt)
+    val glassActionTitle = app.getString(R.string.notif_action_glass, m.glassInt)
     val glassAction =
       NotificationCompat.Action.Builder(
         IconCompat.createWithResource(app, R.drawable.ic_notif_action_glass),
@@ -120,7 +103,7 @@ object WaterPersistentNotification {
         .setSubText(headline)
         .setContentTitle(title)
         .setContentText(summary)
-        .setProgress(goalForBar, progressValue, false)
+        .setProgress(m.goalForBar, m.progressValue, false)
         .setStyle(style)
         .setContentIntent(contentPi)
         .setOngoing(true)
