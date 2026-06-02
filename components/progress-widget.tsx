@@ -3,6 +3,7 @@ import { Text, useWindowDimensions, View } from "react-native";
 import { formatGlasses, formatMl } from "@/lib/format";
 import { QuickAddRow } from "@/components/quick-add-row";
 import { PulseOnChange } from "@/components/pulse-on-change";
+import type { QuickPreset } from "@/store/use-water-store";
 
 type ProgressWidgetProps = {
   consumedMl: number;
@@ -10,8 +11,10 @@ type ProgressWidgetProps = {
   glassMl: number;
   quickAdd?: {
     glassLabel: string;
+    glassIcon?: string;
+    presets: QuickPreset[];
     onAddGlass: () => void;
-    onAddCustom: () => void;
+    onAddCustom: (amountMl: number) => void;
   };
 };
 
@@ -124,8 +127,11 @@ export function ProgressWidget({ consumedMl, goalMl, glassMl, quickAdd }: Progre
         <View style={isComplete ? { opacity: 0.92 } : undefined}>
           <QuickAddRow
             glassLabel={quickAdd.glassLabel}
+            glassIcon={quickAdd.glassIcon}
+            presets={quickAdd.presets}
             onAddGlass={quickAdd.onAddGlass}
             onAddCustom={quickAdd.onAddCustom}
+            isComplete={isComplete}
           />
         </View>
       ) : null}

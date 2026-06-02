@@ -1,4 +1,5 @@
 import React from "react";
+import { Ionicons } from "@expo/vector-icons";
 import { Platform, Pressable, Text, UIManager, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
@@ -6,22 +7,15 @@ import { MetricCard } from "@/components/metric-card";
 import { PulseOnChange } from "@/components/pulse-on-change";
 import { SectionCard } from "@/components/section-card";
 import { ProgressWidget } from "@/components/progress-widget";
+import { StreakCard } from "@/components/streak-card";
+import { UndoToast } from "@/components/undo-toast";
 import { addDays, getDayKey, getShortWeekday, startOfDay } from "@/lib/date";
 import { formatGlasses, formatMl } from "@/lib/format";
+import { computeStreak } from "@/lib/streak";
 import { impactMedium, notifySuccess } from "@/lib/haptics";
+import { cancelWaterReminders, scheduleWaterReminders } from "@/lib/notifications";
 import { flushWidgetPendingAdds, syncAndroidWaterWidgetFromStore } from "@/lib/widget";
-import { useWaterStore } from "@/store/use-water-store";
-
-const dailySummary = (glasses: number) => {
-  const rounded = Math.round(glasses * 10) / 10;
-  if (rounded <= 0) {
-    return "Let’s start with a calm sip.";
-  }
-  if (rounded === 1) {
-    return "1 glass in. Smooth start.";
-  }
-  return `${rounded} glasses in the tank.`;
-};
+import { useWaterStore, waitForWaterStoreHydration } from "@/store/use-water-store";
 
 export default function HomeScreen() {
   const logs = useWaterStore((state) => state.logs);
@@ -29,8 +23,30 @@ export default function HomeScreen() {
   const glassMl = useWaterStore((state) => state.glassMl);
   const addGlass = useWaterStore((state) => state.addGlass);
   const addCustom = useWaterStore((state) => state.addCustom);
+  const removeLog = useWaterStore((state) => state.removeLog);
+  const glassIcon = useWaterStore((state) => state.glassIcon);
+  const presets = useWaterStore((state) => state.presets);
+  const reminderEnabled = useWaterStore((state) => state.reminderEnabled);
+  const reminderIntervalHours = useWaterStore((state) => state.reminderIntervalHours);
+  const reminderStartHour = useWaterStore((state) => state.reminderStartHour);
+  const reminderEndHour = useWaterStore((state) => state.reminderEndHour);
 
   const insets = useSafeAreaInsets();
+
+  const [undoEntry, setUndoEntry] = React.useState<{ id: string; label: string } | null>(null);
+  const undoTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const showUndo = React.useCallback((id: string, label: string) => {
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+    setUndoEntry({ id, label });
+    undoTimerRef.current = setTimeout(() => setUndoEntry(null), 4000);
+  }, []);
+
+  React.useEffect(() => {
+    return () => {
+      if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+    };
+  }, []);
 
   const todayKey = getDayKey(new Date());
   const todayMl = React.useMemo(() => {
@@ -40,8 +56,43 @@ export default function HomeScreen() {
   }, [logs, todayKey]);
 
   const todayGlasses = todayMl / glassMl;
-  const summary = dailySummary(todayGlasses);
   const isComplete = todayMl >= goalMl && goalMl > 0;
+
+  // Glasses behind schedule: positive = behind, negative = ahead
+  const pacingBehindGlasses = React.useMemo(() => {
+    if (isComplete) return 0;
+    const now = new Date();
+    const hour = now.getHours() + now.getMinutes() / 60;
+    if (hour <= reminderStartHour || hour >= reminderEndHour) return 0;
+    const windowProgress = (hour - reminderStartHour) / (reminderEndHour - reminderStartHour);
+    const expectedMl = windowProgress * goalMl;
+    return (expectedMl - todayMl) / glassMl;
+  }, [isComplete, todayMl, goalMl, glassMl, reminderStartHour, reminderEndHour]);
+
+  const hoursLeftInWindow = React.useMemo(() => {
+    if (!reminderEnabled) return null;
+    const hour = new Date().getHours() + new Date().getMinutes() / 60;
+    if (hour >= reminderEndHour) return null;
+    return Math.ceil(reminderEndHour - hour);
+  }, [reminderEnabled, reminderEndHour]);
+
+  const summary = React.useMemo(() => {
+    const rounded = Math.round(todayGlasses * 10) / 10;
+    if (rounded <= 0) return "Let's start with a calm sip.";
+    if (pacingBehindGlasses >= 2) {
+      const suffix = hoursLeftInWindow != null ? `${hoursLeftInWindow}h left today` : "drink up";
+      return `${Math.round(pacingBehindGlasses)} glasses behind — ${suffix}.`;
+    }
+    if (pacingBehindGlasses >= 1) {
+      const suffix = hoursLeftInWindow != null ? `${hoursLeftInWindow}h left today` : "nearly there";
+      return `1 glass behind — ${suffix}.`;
+    }
+    if (pacingBehindGlasses <= -1) return "Ahead of schedule. Keep it up.";
+    if (rounded === 1) return "1 glass in. On pace.";
+    return `${rounded} glasses in the tank.`;
+  }, [todayGlasses, pacingBehindGlasses, hoursLeftInWindow]);
+
+  const remainingGlasses = Math.max(0, Math.ceil((goalMl - todayMl) / glassMl));
 
   const pageBackground = isComplete ? "#FFFBEB" : "#F8FAFC";
   const heroBackground = isComplete ? "#FEF3C7" : "#ECFEFF";
@@ -73,15 +124,66 @@ export default function HomeScreen() {
     [weeklyData],
   );
 
+  const streak = React.useMemo(() => computeStreak(logs, goalMl), [logs, goalMl]);
+
+  const recentDays = React.useMemo(
+    () => weeklyData.map((day) => day.value >= goalMl),
+    [weeklyData, goalMl],
+  );
+
   const handleAddGlass = React.useCallback(() => {
     addGlass();
     impactMedium();
-  }, [addGlass]);
+    const id = useWaterStore.getState().logs[0]?.id;
+    if (id) showUndo(id, `Added ${glassMl} ml`);
+  }, [addGlass, glassMl, showUndo]);
 
-  const handleAddCustom = React.useCallback(() => {
-    addCustom(100);
+  const handleAddCustom = React.useCallback((amountMl: number) => {
+    addCustom(amountMl);
     notifySuccess();
-  }, [addCustom]);
+    const id = useWaterStore.getState().logs[0]?.id;
+    if (id) showUndo(id, `Added ${amountMl} ml`);
+  }, [addCustom, showUndo]);
+
+  const handleUndo = React.useCallback(() => {
+    if (!undoEntry) return;
+    removeLog(undoEntry.id);
+    impactMedium();
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+    setUndoEntry(null);
+  }, [undoEntry, removeLog]);
+
+  // On cold start: ensure reminders are active if they were cancelled when the goal
+  // was hit yesterday. Awaits hydration so we read real persisted state, not defaults.
+  React.useEffect(() => {
+    void waitForWaterStoreHydration().then(() => {
+      const s = useWaterStore.getState();
+      if (!s.reminderEnabled) return;
+      const key = getDayKey(new Date());
+      const ml = s.logs
+        .filter((l) => getDayKey(new Date(l.timestamp)) === key)
+        .reduce((sum, l) => sum + l.amountMl, 0);
+      if (ml < s.goalMl) {
+        void scheduleWaterReminders(s.reminderIntervalHours, s.reminderStartHour, s.reminderEndHour);
+      }
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // mount-only — intentional
+
+  // Cancel reminders the moment the daily goal is hit; restore them if a log is
+  // removed and the total drops back below the goal.
+  const prevIsCompleteRef = React.useRef<boolean | null>(null);
+  React.useEffect(() => {
+    const prev = prevIsCompleteRef.current;
+    prevIsCompleteRef.current = isComplete;
+    if (prev === null) return; // skip initial render
+    if (!reminderEnabled) return;
+    if (isComplete && !prev) {
+      void cancelWaterReminders();
+    } else if (!isComplete && prev) {
+      void scheduleWaterReminders(reminderIntervalHours, reminderStartHour, reminderEndHour);
+    }
+  }, [isComplete, reminderEnabled, reminderIntervalHours, reminderStartHour, reminderEndHour]);
 
   React.useEffect(() => {
     if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -193,6 +295,8 @@ export default function HomeScreen() {
         </View>
       </View>
 
+      <StreakCard streak={streak} recentDays={recentDays} />
+
       <View style={{ flexDirection: "row", gap: 12, flexShrink: 0 }}>
         <View style={{ flex: 1 }}>
           <MetricCard
@@ -204,9 +308,9 @@ export default function HomeScreen() {
         </View>
         <View style={{ flex: 1 }}>
           <MetricCard
-            label="Weekly pace"
-            value={formatMl(weeklyPaceMl)}
-            subtitle="7-day avg"
+            label="Left today"
+            value={isComplete ? "Done!" : `${remainingGlasses}`}
+            subtitle={isComplete ? "goal reached" : `${remainingGlasses === 1 ? "glass" : "glasses"} to go`}
             tone={isComplete ? "warm" : "warm"}
             variant="outline"
           />
@@ -222,6 +326,8 @@ export default function HomeScreen() {
               glassMl={glassMl}
               quickAdd={{
                 glassLabel: `${glassMl} ml`,
+                glassIcon,
+                presets,
                 onAddGlass: handleAddGlass,
                 onAddCustom: handleAddCustom,
               }}
@@ -230,42 +336,39 @@ export default function HomeScreen() {
         </SectionCard>
       </View>
 
+      {undoEntry && (
+        <View
+          style={{
+            position: "absolute",
+            bottom: Math.max(insets.bottom, 12) + 16 + 56,
+            left: horizontalPad,
+            right: horizontalPad,
+          }}
+        >
+          <UndoToast label={undoEntry.label} onUndo={handleUndo} isComplete={isComplete} />
+        </View>
+      )}
+
       <Pressable
         onPress={() => router.push("/settings")}
+        hitSlop={12}
         style={({ pressed }) => ({
-          flexShrink: 0,
-          backgroundColor: pressed ? "#EEF2F6" : "#F8FAFC",
-          borderRadius: 20,
-          borderCurve: "continuous",
-          borderWidth: 1,
-          borderColor: "#E2E8F0",
-          padding: 16,
-          boxShadow: "0 8px 18px rgba(15, 23, 42, 0.06)",
-          opacity: pressed ? 0.96 : 1,
+          position: "absolute",
+          bottom: Math.max(insets.bottom, 12) + 16,
+          right: horizontalPad,
+          width: 48,
+          height: 48,
+          borderRadius: 24,
+          backgroundColor: isComplete ? "#FEF3C7" : "#ECFEFF",
+          alignItems: "center",
+          justifyContent: "center",
+          boxShadow: "0 4px 12px rgba(8, 145, 178, 0.18)",
+          opacity: pressed ? 0.7 : 1,
         })}
+        accessibilityLabel="Settings"
+        accessibilityRole="button"
       >
-        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-          <View style={{ flex: 1, gap: 4 }}>
-            <Text selectable style={{ fontSize: 16, fontWeight: "700", color: "#0F172A" }}>
-              Settings
-            </Text>
-            <Text selectable style={{ fontSize: 13, color: "#64748B" }}>
-              Daily goal · Glass size ·{" "}
-              <Text
-                accessibilityRole="link"
-                accessibilityLabel="Recent logs — open expanded"
-                suppressHighlighting={false}
-                onPress={() =>
-                  router.push({ pathname: "/settings", params: { view: "recent-logs" } })
-                }
-                style={{ fontSize: 13, color: "#64748B" }}
-              >
-                Recent logs
-              </Text>
-            </Text>
-          </View>
-          <Text style={{ fontSize: 22, color: "#94A3B8", fontWeight: "600" }}>›</Text>
-        </View>
+        <Ionicons name="settings-outline" size={22} color={heroKicker} />
       </Pressable>
     </View>
   );

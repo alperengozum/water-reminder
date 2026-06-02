@@ -10,28 +10,56 @@ export type WaterLog = {
   source: "glass" | "quick";
 };
 
+export type QuickPreset = {
+  amountMl: number;
+  icon?: string;
+};
+
 type WaterState = {
   goalMl: number;
   glassMl: number;
   logs: WaterLog[];
   persistentNotificationEnabled: boolean;
+  glassIcon?: string;
+  presets: QuickPreset[];
+  reminderEnabled: boolean;
+  reminderIntervalHours: number;
+  reminderStartHour: number;
+  reminderEndHour: number;
   addGlass: () => void;
   addCustom: (amountMl: number) => void;
   removeLog: (id: string) => void;
   setGoalGlasses: (glasses: number) => void;
   setGlassMl: (ml: number) => void;
   setPersistentNotificationEnabled: (enabled: boolean) => void;
+  setGlassIcon: (icon: string | undefined) => void;
+  setPresets: (presets: QuickPreset[]) => void;
+  setReminderEnabled: (enabled: boolean) => void;
+  setReminderIntervalHours: (hours: number) => void;
+  setReminderStartHour: (hour: number) => void;
+  setReminderEndHour: (hour: number) => void;
 };
 
 const defaultGlassMl = 250;
 const defaultGoalGlasses = 8;
 const defaultGoalMl = defaultGlassMl * defaultGoalGlasses;
+const defaultPresets: QuickPreset[] = [
+  { amountMl: 100 },
+  { amountMl: 330 },
+  { amountMl: 500 },
+];
 
 const creator: StateCreator<WaterState> = (set, get) => ({
   goalMl: defaultGoalMl,
   glassMl: defaultGlassMl,
   logs: [],
   persistentNotificationEnabled: false,
+  glassIcon: undefined,
+  presets: defaultPresets,
+  reminderEnabled: false,
+  reminderIntervalHours: 2,
+  reminderStartHour: 8,
+  reminderEndHour: 22,
   addGlass: () => {
     const { glassMl } = get();
     const log: WaterLog = {
@@ -68,6 +96,12 @@ const creator: StateCreator<WaterState> = (set, get) => ({
   setPersistentNotificationEnabled: (enabled: boolean) => {
     set({ persistentNotificationEnabled: enabled });
   },
+  setGlassIcon: (icon) => set({ glassIcon: icon }),
+  setPresets: (presets) => set({ presets }),
+  setReminderEnabled: (enabled) => set({ reminderEnabled: enabled }),
+  setReminderIntervalHours: (hours) => set({ reminderIntervalHours: hours }),
+  setReminderStartHour: (hour) => set({ reminderStartHour: hour }),
+  setReminderEndHour: (hour) => set({ reminderEndHour: hour }),
 });
 
 export const useWaterStore = create<WaterState>()(
@@ -79,6 +113,12 @@ export const useWaterStore = create<WaterState>()(
       glassMl: state.glassMl,
       logs: state.logs,
       persistentNotificationEnabled: state.persistentNotificationEnabled,
+      glassIcon: state.glassIcon,
+      presets: state.presets,
+      reminderEnabled: state.reminderEnabled,
+      reminderIntervalHours: state.reminderIntervalHours,
+      reminderStartHour: state.reminderStartHour,
+      reminderEndHour: state.reminderEndHour,
     }),
   }),
 );

@@ -1,49 +1,78 @@
 import React from "react";
+import { Ionicons } from "@expo/vector-icons";
 import { Pressable, Text, View } from "react-native";
+import type { QuickPreset } from "@/store/use-water-store";
 
 type QuickAddRowProps = {
   glassLabel: string;
+  glassIcon?: string;
+  presets: QuickPreset[];
   onAddGlass: () => void;
-  onAddCustom: () => void;
+  onAddCustom: (amountMl: number) => void;
+  isComplete?: boolean;
 };
 
-export function QuickAddRow({ glassLabel, onAddGlass, onAddCustom }: QuickAddRowProps) {
+export function QuickAddRow({ glassLabel, glassIcon, presets, onAddGlass, onAddCustom, isComplete }: QuickAddRowProps) {
+  const glassBg = isComplete ? "#FDE68A" : "#BAE6FD";
+  const glassBgPressed = isComplete ? "#FCD34D" : "#CFFAFE";
+  const glassIconColor = isComplete ? "#92400E" : "#0C4A6E";
+  const glassShadow = isComplete
+    ? "0 12px 20px rgba(234, 179, 8, 0.25)"
+    : "0 12px 20px rgba(8, 145, 178, 0.2)";
+
   return (
-    <View style={{ flexDirection: "row", gap: 12 }}>
+    <View style={{ gap: 10 }}>
       <Pressable
         onPress={onAddGlass}
         style={({ pressed }) => ({
-          flex: 1,
-          paddingVertical: 12,
+          paddingVertical: 13,
           borderRadius: 999,
           borderCurve: "continuous",
-          backgroundColor: pressed ? "#CFFAFE" : "#BAE6FD",
+          backgroundColor: pressed ? glassBgPressed : glassBg,
           alignItems: "center",
-          boxShadow: "0 12px 20px rgba(8, 145, 178, 0.2)",
+          boxShadow: glassShadow,
           transform: [{ scale: pressed ? 0.97 : 1 }],
         })}
       >
-        <Text selectable style={{ fontSize: 14, fontWeight: "700", color: "#0C4A6E" }}>
-          Add a glass ({glassLabel})
-        </Text>
+        {glassIcon ? (
+          <Ionicons name={glassIcon as any} size={22} color={glassIconColor} />
+        ) : (
+          <Text selectable style={{ fontSize: 14, fontWeight: "700", color: glassIconColor }}>
+            Add a glass ({glassLabel})
+          </Text>
+        )}
       </Pressable>
-      <Pressable
-        onPress={onAddCustom}
-        style={({ pressed }) => ({
-          flex: 1,
-          paddingVertical: 12,
-          borderRadius: 999,
-          borderCurve: "continuous",
-          backgroundColor: pressed ? "#FDE68A" : "#FED7AA",
-          alignItems: "center",
-          boxShadow: "0 12px 20px rgba(217, 119, 6, 0.22)",
-          transform: [{ scale: pressed ? 0.97 : 1 }],
-        })}
-      >
-        <Text selectable style={{ fontSize: 14, fontWeight: "700", color: "#9A3412" }}>
-          Quick add 100 ml
-        </Text>
-      </Pressable>
+
+      {presets.length > 0 && (
+        <View style={{ flexDirection: "row", gap: 8 }}>
+          {presets.map((preset, i) => (
+            <Pressable
+              key={i}
+              onPress={() => onAddCustom(preset.amountMl)}
+              style={({ pressed }) => ({
+                flex: 1,
+                paddingVertical: 10,
+                borderRadius: 999,
+                borderCurve: "continuous",
+                backgroundColor: pressed ? "#FDE68A" : "#FFF7ED",
+                borderWidth: 1,
+                borderColor: pressed ? "#FBBF24" : "#FED7AA",
+                alignItems: "center",
+                justifyContent: "center",
+                transform: [{ scale: pressed ? 0.96 : 1 }],
+              })}
+            >
+              {preset.icon ? (
+                <Ionicons name={preset.icon as any} size={18} color="#9A3412" />
+              ) : (
+                <Text selectable style={{ fontSize: 13, fontWeight: "700", color: "#9A3412" }}>
+                  +{preset.amountMl} ml
+                </Text>
+              )}
+            </Pressable>
+          ))}
+        </View>
+      )}
     </View>
   );
 }
