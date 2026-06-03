@@ -46,6 +46,7 @@ class MainApplication : Application(), ReactApplication {
     }
     loadReactNative(this)
     ApplicationLifecycleDispatcher.onApplicationCreate(this)
+    WaterWidgetDayChangeReceiver.scheduleMidnightAlarm(this)
   }
 
   override fun onConfigurationChanged(newConfig: Configuration) {
