@@ -166,7 +166,13 @@ export default function HomeScreen() {
       if (ml >= s.goalMl) {
         void cancelWaterReminders();
       } else {
-        void scheduleWaterReminders(s.reminderIntervalHours, s.reminderStartHour, s.reminderEndHour);
+        const lastDrink = s.logs.find((l) => getDayKey(new Date(l.timestamp)) === key);
+        void scheduleWaterReminders(
+          s.reminderIntervalHours,
+          s.reminderStartHour,
+          s.reminderEndHour,
+          lastDrink ? new Date(lastDrink.timestamp) : undefined,
+        );
       }
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -183,9 +189,35 @@ export default function HomeScreen() {
     if (isComplete && !prev) {
       void cancelWaterReminders();
     } else if (!isComplete && prev) {
-      void scheduleWaterReminders(reminderIntervalHours, reminderStartHour, reminderEndHour);
+      const s = useWaterStore.getState();
+      const key = getDayKey(new Date());
+      const lastDrink = s.logs.find((l) => getDayKey(new Date(l.timestamp)) === key);
+      void scheduleWaterReminders(
+        reminderIntervalHours,
+        reminderStartHour,
+        reminderEndHour,
+        lastDrink ? new Date(lastDrink.timestamp) : undefined,
+      );
     }
   }, [isComplete, reminderEnabled, reminderIntervalHours, reminderStartHour, reminderEndHour]);
+
+  // Drink-aware reschedule: push the next reminder out by intervalHours from each drink,
+  // so a notification never fires shortly after the user already logged water.
+  const lastRescheduledLogRef = React.useRef<string | null>(null);
+  React.useEffect(() => {
+    if (!reminderEnabled || isComplete) return;
+    const todayLogs = logs.filter((l) => getDayKey(new Date(l.timestamp)) === todayKey);
+    if (todayLogs.length === 0) return;
+    const latestLog = todayLogs[0]; // logs are prepended, so [0] is most recent
+    if (latestLog.id === lastRescheduledLogRef.current) return;
+    lastRescheduledLogRef.current = latestLog.id;
+    void scheduleWaterReminders(
+      reminderIntervalHours,
+      reminderStartHour,
+      reminderEndHour,
+      new Date(latestLog.timestamp),
+    );
+  }, [logs, reminderEnabled, isComplete, reminderIntervalHours, reminderStartHour, reminderEndHour, todayKey]);
 
   React.useEffect(() => {
     if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {

@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect } from "expo-router";
 import { SectionCard } from "@/components/section-card";
 import { Stepper } from "@/components/stepper";
+import { getDayKey } from "@/lib/date";
 import { impactLight, impactMedium } from "@/lib/haptics";
 import {
   cancelWaterReminders,
@@ -98,7 +99,15 @@ export default function SettingsScreen() {
   // Reschedule whenever any reminder setting changes while enabled
   React.useEffect(() => {
     if (!reminderEnabled) return;
-    void scheduleWaterReminders(reminderIntervalHours, reminderStartHour, reminderEndHour);
+    const key = getDayKey(new Date());
+    const { logs } = useWaterStore.getState();
+    const lastDrink = logs.find((l) => getDayKey(new Date(l.timestamp)) === key);
+    void scheduleWaterReminders(
+      reminderIntervalHours,
+      reminderStartHour,
+      reminderEndHour,
+      lastDrink ? new Date(lastDrink.timestamp) : undefined,
+    );
   }, [reminderEnabled, reminderIntervalHours, reminderStartHour, reminderEndHour]);
 
   const insets = useSafeAreaInsets();

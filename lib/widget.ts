@@ -1,5 +1,6 @@
 import { NativeModules, PermissionsAndroid, Platform } from "react-native";
 import { addDays, getDayKey, startOfDay } from "@/lib/date";
+import { computeStreak } from "@/lib/streak";
 import { useWaterStore, waitForWaterStoreHydration, type WaterLog } from "@/store/use-water-store";
 
 type WaterWidgetPayload = {
@@ -12,6 +13,7 @@ type WaterWidgetPayload = {
   dayKey: string;
   weeklyDayTotals?: Record<string, number>;
   presets?: Array<{ amountMl: number; icon?: string }>;
+  streakDays?: number;
 };
 
 type WaterWidgetNativeModule = {
@@ -64,6 +66,7 @@ export function updateWaterWidget(
   dayKey: string = getDayKey(new Date()),
   glassIcon?: string,
   presets?: Array<{ amountMl: number; icon?: string }>,
+  streakDays?: number,
 ) {
   if (process.env.EXPO_OS !== "android") {
     return;
@@ -76,6 +79,7 @@ export function updateWaterWidget(
     if (weeklyDayTotals !== undefined) payload.weeklyDayTotals = weeklyDayTotals;
     if (glassIcon !== undefined) payload.glassIcon = glassIcon;
     if (presets !== undefined) payload.presets = presets;
+    if (streakDays !== undefined) payload.streakDays = streakDays;
     moduleRef.syncWidget(payload);
     return;
   }
@@ -127,7 +131,8 @@ export function syncAndroidWaterWidgetFromStore(): void {
   const todayMl = todayMlFromLogs(logs, dayKey);
   const weeklyPaceMl = weeklyPaceFromLogs(logs);
   const weeklyDayTotals = weeklyDayTotalsFromLogs(logs);
-  updateWaterWidget(todayMl, goalMl, glassMl, weeklyPaceMl, weeklyDayTotals, dayKey, glassIcon, presets);
+  const streakDays = computeStreak(logs, goalMl);
+  updateWaterWidget(todayMl, goalMl, glassMl, weeklyPaceMl, weeklyDayTotals, dayKey, glassIcon, presets, streakDays);
 }
 
 export function setAndroidPersistentNotificationEnabled(enabled: boolean): void {

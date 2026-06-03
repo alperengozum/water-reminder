@@ -354,14 +354,7 @@ object WaterWidgetUpdater {
       },
     )
 
-    views.setTextViewText(R.id.widget_compact_header, context.getString(R.string.widget_compact_header_water))
-    views.setTextColor(
-      R.id.widget_compact_header,
-      ContextCompat.getColor(
-        context,
-        if (m.isComplete) R.color.widget_text_warm_dark else R.color.widget_compact_title,
-      ),
-    )
+    views.setViewVisibility(R.id.widget_compact_header, View.GONE)
 
     views.setTextViewText(R.id.widget_compact_pct, context.getString(R.string.widget_compact_pct, m.pct))
     views.setTextColor(
@@ -372,20 +365,31 @@ object WaterWidgetUpdater {
       ),
     )
 
-    val statusRes =
-      when {
-        m.isComplete -> R.string.widget_compact_status_goal
-        m.pct <= 0 -> R.string.widget_compact_status_empty
-        else -> R.string.widget_compact_status_progress
+    when {
+      m.isComplete -> {
+        views.setViewVisibility(R.id.widget_compact_status, View.VISIBLE)
+        views.setTextViewText(R.id.widget_compact_status, context.getString(R.string.widget_compact_status_goal))
+        views.setTextColor(
+          R.id.widget_compact_status,
+          ContextCompat.getColor(context, R.color.widget_text_warm),
+        )
       }
-    views.setTextViewText(R.id.widget_compact_status, context.getString(statusRes))
-    views.setTextColor(
-      R.id.widget_compact_status,
-      ContextCompat.getColor(
-        context,
-        if (m.isComplete) R.color.widget_text_warm else R.color.widget_compact_status,
-      ),
-    )
+      m.pct <= 0 -> {
+        views.setViewVisibility(R.id.widget_compact_status, View.GONE)
+      }
+      else -> {
+        val remaining = (m.goalInt - m.todayInt).coerceAtLeast(0)
+        views.setViewVisibility(R.id.widget_compact_status, View.VISIBLE)
+        views.setTextViewText(
+          R.id.widget_compact_status,
+          context.getString(R.string.widget_compact_status_progress, remaining),
+        )
+        views.setTextColor(
+          R.id.widget_compact_status,
+          ContextCompat.getColor(context, R.color.widget_compact_status),
+        )
+      }
+    }
 
     when {
       m.isComplete -> {
@@ -405,6 +409,10 @@ object WaterWidgetUpdater {
       R.id.widget_compact_btn_log,
       "setBackgroundResource",
       if (m.isComplete) R.drawable.widget_compact_log_btn_bg_complete else R.drawable.widget_compact_log_btn_bg,
+    )
+    views.setTextViewText(
+      R.id.widget_compact_btn_log,
+      context.getString(R.string.widget_compact_btn_log_ml, m.glassInt),
     )
     views.setTextColor(
       R.id.widget_compact_btn_log,

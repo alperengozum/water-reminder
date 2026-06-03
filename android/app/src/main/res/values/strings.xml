@@ -27,6 +27,7 @@
   <string name="widget_preview_btn_glass">+250 ml</string>
   <string name="widget_preview_btn_preset_0">+330 ml</string>
   <string name="widget_preview_btn_preset_1">+500 ml</string>
+  <string name="widget_preview_btn_preset_2">+750 ml</string>
   <!-- Legacy strings (safe to remove if unused) -->
   <string name="widget_water_line_primary">%1$d ml · Goal %2$d ml</string>
   <string name="widget_water_line_secondary">%1$d%% · %2$d ml glass</string>
@@ -36,9 +37,9 @@
   <string name="widget_compact_header_water">WATER</string>
   <string name="widget_compact_pct">%1$d%%</string>
   <string name="widget_compact_btn_log">+ Log</string>
-  <string name="widget_compact_status_empty">Empty</string>
-  <string name="widget_compact_status_progress">Keep going</string>
+  <string name="widget_compact_btn_log_ml">+%1$d ml</string>
+  <string name="widget_compact_status_progress">%1$d ml left</string>
   <string name="widget_compact_status_goal">Goal reached</string>
   <string name="widget_compact_preview_pct">65%</string>
-  <string name="widget_compact_preview_status">Keep going</string>
+  <string name="widget_compact_preview_status">700 ml left</string>
 </resources>

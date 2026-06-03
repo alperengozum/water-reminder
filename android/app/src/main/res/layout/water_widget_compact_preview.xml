@@ -16,8 +16,8 @@
         android:orientation="horizontal">
 
         <FrameLayout
-            android:layout_width="34dp"
-            android:layout_height="34dp"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
             android:layout_marginEnd="8dp"
             android:background="@drawable/widget_compact_icon_circle">
 
@@ -25,7 +25,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:importantForAccessibility="no"
-                android:padding="7dp"
+                android:padding="8dp"
                 android:scaleType="fitCenter"
                 android:src="@drawable/ic_widget_water_drop" />
         </FrameLayout>
@@ -37,20 +37,21 @@
             android:text="@string/widget_compact_header_water"
             android:textAllCaps="true"
             android:textColor="@color/widget_compact_title"
-            android:textSize="14sp"
-            android:textStyle="bold" />
+            android:textSize="15sp"
+            android:textStyle="bold"
+            android:visibility="gone" />
     </LinearLayout>
 
     <FrameLayout
         android:layout_width="match_parent"
-        android:layout_height="230dp"
+        android:layout_height="288dp"
         android:layout_marginTop="0dp"
         android:layout_marginBottom="2dp">
 
         <ProgressBar
             style="?android:attr/progressBarStyleHorizontal"
-            android:layout_width="230dp"
-            android:layout_height="230dp"
+            android:layout_width="288dp"
+            android:layout_height="288dp"
             android:layout_gravity="center"
             android:indeterminate="false"
             android:max="1000"
@@ -73,7 +74,7 @@
                 android:includeFontPadding="false"
                 android:text="@string/widget_compact_preview_pct"
                 android:textColor="@color/widget_compact_pct"
-                android:textSize="26sp"
+                android:textSize="30sp"
                 android:textStyle="bold" />
 
             <TextView
@@ -84,7 +85,7 @@
                 android:includeFontPadding="false"
                 android:text="@string/widget_compact_preview_status"
                 android:textColor="@color/widget_compact_status"
-                android:textSize="11sp" />
+                android:textSize="12sp" />
         </LinearLayout>
     </FrameLayout>
 
@@ -94,7 +95,7 @@
         android:background="@drawable/widget_compact_log_btn_bg"
         android:gravity="center"
         android:paddingVertical="7dp"
-        android:text="@string/widget_compact_btn_log"
+        android:text="+250 ml"
         android:textColor="@color/widget_compact_log_text"
         android:textSize="14sp"
         android:textStyle="bold" />
