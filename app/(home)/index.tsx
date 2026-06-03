@@ -152,8 +152,9 @@ export default function HomeScreen() {
     setUndoEntry(null);
   }, [undoEntry, removeLog]);
 
-  // On cold start: ensure reminders are active if they were cancelled when the goal
-  // was hit yesterday. Awaits hydration so we read real persisted state, not defaults.
+  // On cold start: cancel reminders if goal is already hit (e.g. via widget while app
+  // was closed), or reschedule if they were cancelled when the goal was hit yesterday.
+  // Awaits hydration so we read real persisted state, not defaults.
   React.useEffect(() => {
     void waitForWaterStoreHydration().then(() => {
       const s = useWaterStore.getState();
@@ -162,7 +163,9 @@ export default function HomeScreen() {
       const ml = s.logs
         .filter((l) => getDayKey(new Date(l.timestamp)) === key)
         .reduce((sum, l) => sum + l.amountMl, 0);
-      if (ml < s.goalMl) {
+      if (ml >= s.goalMl) {
+        void cancelWaterReminders();
+      } else {
         void scheduleWaterReminders(s.reminderIntervalHours, s.reminderStartHour, s.reminderEndHour);
       }
     });
