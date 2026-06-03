@@ -20,6 +20,7 @@ object WaterWidgetStorage {
   private const val KEY_SNAPSHOT_DAY = "snapshot_day_yyyy_MM_dd"
   private const val KEY_PRESETS_JSON = "presets_json"
   private const val KEY_GLASS_ICON = "glass_icon"
+  private const val KEY_STREAK_DAYS = "streak_days"
 
   fun localDayKeyNow(): String {
     val fmt = SimpleDateFormat("yyyy-MM-dd", Locale.US)
@@ -51,6 +52,7 @@ object WaterWidgetStorage {
     dayTotalsJson: String? = null,
     presetsJson: String? = null,
     glassIcon: String? = null,
+    streakDays: Int = 0,
   ) {
     context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().apply {
       putFloat(KEY_TODAY_ML, todayMl)
@@ -61,6 +63,7 @@ object WaterWidgetStorage {
       if (dayTotalsJson != null) putString(KEY_DAY_TOTALS_JSON, dayTotalsJson)
       if (presetsJson != null) putString(KEY_PRESETS_JSON, presetsJson)
       if (glassIcon != null) putString(KEY_GLASS_ICON, glassIcon)
+      putInt(KEY_STREAK_DAYS, streakDays.coerceAtLeast(0))
       apply()
     }
   }
@@ -75,6 +78,7 @@ object WaterWidgetStorage {
       snapshotDayKey = prefs.getString(KEY_SNAPSHOT_DAY, null),
       presets = parsePresetsJson(prefs.getString(KEY_PRESETS_JSON, null)),
       glassIcon = prefs.getString(KEY_GLASS_ICON, null),
+      streakDays = prefs.getInt(KEY_STREAK_DAYS, 0).coerceAtLeast(0),
     )
   }
 
@@ -243,6 +247,7 @@ data class WidgetSnapshot(
   val snapshotDayKey: String?,
   val presets: List<PresetEntry> = emptyList(),
   val glassIcon: String? = null,
+  val streakDays: Int = 0,
 )
 
 data class PresetEntry(val amountMl: Float, val icon: String?)

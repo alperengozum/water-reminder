@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:description="@string/widget_streak_description"
+    android:initialLayout="@layout/water_widget_streak"
+    android:minResizeHeight="92dp"
+    android:minResizeWidth="92dp"
+    android:minWidth="130dp"
+    android:minHeight="120dp"
+    android:previewLayout="@layout/water_widget_streak_preview"
+    android:resizeMode="horizontal|vertical"
+    android:targetCellHeight="2"
+    android:targetCellWidth="2"
+    android:updatePeriodMillis="0"
+    android:widgetCategory="home_screen"
+    tools:targetApi="31" />

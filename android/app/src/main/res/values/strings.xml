@@ -28,6 +28,24 @@
   <string name="widget_preview_btn_preset_0">+330 ml</string>
   <string name="widget_preview_btn_preset_1">+500 ml</string>
   <string name="widget_preview_btn_preset_2">+750 ml</string>
+  <!-- Streak widget -->
+  <string name="widget_streak_name">Water Streak</string>
+  <string name="widget_streak_description">Daily streak counter with one-tap hydration log.</string>
+  <string name="widget_streak_label">STREAK</string>
+  <string name="widget_streak_unit_single">day</string>
+  <string name="widget_streak_unit_plural">days</string>
+  <string name="widget_streak_none">Hit your goal today to start a streak.</string>
+  <string name="widget_streak_msg_start">Great start — come back tomorrow.</string>
+  <string name="widget_streak_msg_going">%1$d days strong. Keep going.</string>
+  <string name="widget_streak_msg_serious">Serious consistency. Don\'t break it.</string>
+  <string name="widget_streak_msg_unstoppable">You\'re unstoppable.</string>
+  <string name="widget_streak_today">%1$d / %2$d ml today</string>
+  <!-- Streak widget picker preview -->
+  <string name="widget_streak_preview_count">5</string>
+  <string name="widget_streak_preview_pct">80%</string>
+  <string name="widget_streak_preview_message">Serious consistency. Don\'t break it.</string>
+  <string name="widget_streak_preview_today">1,600 / 2,000 ml today</string>
+  <string name="widget_streak_preview_btn">+250 ml</string>
   <!-- Legacy strings (safe to remove if unused) -->
   <string name="widget_water_line_primary">%1$d ml · Goal %2$d ml</string>
   <string name="widget_water_line_secondary">%1$d%% · %2$d ml glass</string>

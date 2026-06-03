@@ -25,8 +25,11 @@ object WaterWidgetUpdater {
   private const val RC_COMPACT_HOME_OFFSET = 200_000
   private const val RC_COMPACT_GLASS_OFFSET = 201_000
 
+  private const val RC_STREAK_HOME_OFFSET = 300_000
+  private const val RC_STREAK_GLASS_OFFSET = 301_000
+
   private val widgetProviderClasses: Array<Class<out AppWidgetProvider>> =
-    arrayOf(WaterWidgetProvider::class.java, WaterCompactWidgetProvider::class.java)
+    arrayOf(WaterWidgetProvider::class.java, WaterCompactWidgetProvider::class.java, WaterStreakWidgetProvider::class.java)
 
   /** Host-reported widget size (dp); prefers average of min/max bounds when launcher supplies both. */
   private fun compactHostSizeDp(opts: Bundle): Pair<Int, Int> {
@@ -83,6 +86,7 @@ object WaterWidgetUpdater {
     snapshotDayKey: String = WaterWidgetStorage.localDayKeyNow(),
     presetsJson: String? = null,
     glassIcon: String? = null,
+    streakDays: Int = 0,
   ) {
     WaterWidgetStorage.write(
       context.applicationContext,
@@ -94,6 +98,7 @@ object WaterWidgetUpdater {
       dayTotalsJson,
       presetsJson,
       glassIcon,
+      streakDays,
     )
     refreshAllWidgets(context.applicationContext)
   }
@@ -163,6 +168,7 @@ object WaterWidgetUpdater {
           when (providerClass) {
             WaterWidgetProvider::class.java -> buildRemoteViews(context, snapshot, id)
             WaterCompactWidgetProvider::class.java -> buildCompactRemoteViews(context, snapshot, id)
+            WaterStreakWidgetProvider::class.java -> buildStreakRemoteViews(context, snapshot, id)
             else -> throw IllegalStateException("Unknown widget provider")
           }
         manager.updateAppWidget(id, views)
@@ -442,6 +448,102 @@ object WaterWidgetUpdater {
 
     views.setOnClickPendingIntent(R.id.widget_compact_root, homePi)
     views.setOnClickPendingIntent(R.id.widget_compact_btn_log, glassPi)
+  }
+
+  fun buildStreakRemoteViews(context: Context, snapshot: WidgetSnapshot, appWidgetId: Int): RemoteViews {
+    val views = RemoteViews(context.packageName, R.layout.water_widget_streak)
+    val m = computeMetrics(context, snapshot)
+    val streak = snapshot.streakDays
+    val hasStreak = streak > 0
+
+    views.setInt(
+      R.id.widget_streak_root,
+      "setBackgroundResource",
+      if (hasStreak) R.drawable.widget_streak_bg_warm else R.drawable.widget_streak_bg,
+    )
+
+    views.setTextViewText(R.id.widget_streak_count, streak.toString())
+
+    views.setTextViewText(
+      R.id.widget_streak_unit,
+      context.getString(if (streak == 1) R.string.widget_streak_unit_single else R.string.widget_streak_unit_plural),
+    )
+
+    views.setTextColor(
+      R.id.widget_streak_label,
+      ContextCompat.getColor(
+        context,
+        if (hasStreak) R.color.widget_analyze_icon_warm else R.color.widget_compact_status,
+      ),
+    )
+
+    val message = when {
+      streak == 0 -> context.getString(R.string.widget_streak_none)
+      streak == 1 -> context.getString(R.string.widget_streak_msg_start)
+      streak < 7 -> context.getString(R.string.widget_streak_msg_going, streak)
+      streak < 30 -> context.getString(R.string.widget_streak_msg_serious)
+      else -> context.getString(R.string.widget_streak_msg_unstoppable)
+    }
+    views.setTextViewText(R.id.widget_streak_message, message)
+    views.setTextColor(
+      R.id.widget_streak_message,
+      ContextCompat.getColor(
+        context,
+        if (hasStreak) R.color.widget_text_warm else R.color.widget_compact_status,
+      ),
+    )
+
+    views.setTextViewText(R.id.widget_streak_today, context.getString(R.string.widget_streak_today, m.todayInt, m.goalInt))
+    views.setTextColor(
+      R.id.widget_streak_today,
+      ContextCompat.getColor(
+        context,
+        if (m.isComplete) R.color.widget_text_warm else R.color.widget_text_muted,
+      ),
+    )
+
+    views.setTextViewText(R.id.widget_streak_pct, context.getString(R.string.widget_pct_badge, m.pct))
+    views.setTextColor(
+      R.id.widget_streak_pct,
+      ContextCompat.getColor(
+        context,
+        if (m.isComplete) R.color.widget_text_warm_dark else R.color.widget_text_cool,
+      ),
+    )
+
+    views.setInt(
+      R.id.widget_streak_btn,
+      "setBackgroundResource",
+      if (m.isComplete) R.drawable.widget_chip_warm else R.drawable.widget_chip_cool,
+    )
+    views.setTextViewText(R.id.widget_streak_btn, context.getString(R.string.widget_compact_btn_log_ml, m.glassInt))
+    views.setTextColor(
+      R.id.widget_streak_btn,
+      ContextCompat.getColor(
+        context,
+        if (m.isComplete) R.color.widget_btn_warm_text else R.color.widget_text_cool,
+      ),
+    )
+
+    val homePi = PendingIntent.getActivity(
+      context,
+      RC_STREAK_HOME_OFFSET + appWidgetId,
+      Intent(context, MainActivity::class.java).apply {
+        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
+      },
+      PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+    )
+    val glassPi = PendingIntent.getBroadcast(
+      context,
+      RC_STREAK_GLASS_OFFSET + appWidgetId,
+      Intent(WaterWidgetReceiver.ACTION_ADD_GLASS).apply { setPackage(context.packageName) },
+      PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+    )
+
+    views.setOnClickPendingIntent(R.id.widget_streak_root, homePi)
+    views.setOnClickPendingIntent(R.id.widget_streak_btn, glassPi)
+
+    return views
   }
 
   fun buildCompactRemoteViews(context: Context, snapshot: WidgetSnapshot, appWidgetId: Int): RemoteViews {
