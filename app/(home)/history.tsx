@@ -3,6 +3,7 @@ import { Pressable, ScrollView, Text, useWindowDimensions, View } from "react-na
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { BarChart } from "react-native-gifted-charts";
+import { LogList } from "@/components/log-list";
 import { SectionCard } from "@/components/section-card";
 import {
   computeAllTimeBestStreak,
@@ -14,7 +15,7 @@ import {
   computeMonthCalendar,
   type CalendarCell,
 } from "@/lib/analytics";
-import { impactLight } from "@/lib/haptics";
+import { impactLight, impactMedium } from "@/lib/haptics";
 import { formatMl } from "@/lib/format";
 import { useWaterStore } from "@/store/use-water-store";
 
@@ -106,6 +107,15 @@ function StatCard({
 export default function HistoryScreen() {
   const logs = useWaterStore((state) => state.logs);
   const goalMl = useWaterStore((state) => state.goalMl);
+  const removeLog = useWaterStore((state) => state.removeLog);
+
+  const handleRemoveLog = React.useCallback(
+    (id: string) => {
+      impactMedium();
+      removeLog(id);
+    },
+    [removeLog],
+  );
 
   const today = new Date();
   const [viewYear, setViewYear] = React.useState(today.getFullYear());
@@ -413,6 +423,13 @@ export default function HistoryScreen() {
             }}
           />
         )}
+      </SectionCard>
+
+      <SectionCard variant="soft">
+        <Text selectable style={{ fontSize: 16, fontWeight: "800", color: "#0F172A" }}>
+          Recent logs
+        </Text>
+        <LogList logs={logs} onRemove={handleRemoveLog} />
       </SectionCard>
     </ScrollView>
   );

@@ -2,8 +2,7 @@ import React from "react";
 import { Ionicons } from "@expo/vector-icons";
 import { Alert, AppState, Linking, Pressable, Platform, ScrollView, Switch, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useFocusEffect, useLocalSearchParams } from "expo-router";
-import { LogList } from "@/components/log-list";
+import { useFocusEffect } from "expo-router";
 import { SectionCard } from "@/components/section-card";
 import { Stepper } from "@/components/stepper";
 import { impactLight, impactMedium } from "@/lib/haptics";
@@ -36,16 +35,8 @@ function formatHour(hour: number): string {
 }
 
 export default function SettingsScreen() {
-  const rawView = useLocalSearchParams<{ view?: string | string[] }>().view;
-  const viewParam = React.useMemo(
-    () => (Array.isArray(rawView) ? rawView[0] : rawView),
-    [rawView]
-  );
-
-  const logs = useWaterStore((state) => state.logs);
   const goalMl = useWaterStore((state) => state.goalMl);
   const glassMl = useWaterStore((state) => state.glassMl);
-  const removeLog = useWaterStore((state) => state.removeLog);
   const setGoalGlasses = useWaterStore((state) => state.setGoalGlasses);
   const setGlassMl = useWaterStore((state) => state.setGlassMl);
   const persistentNotificationEnabled = useWaterStore((state) => state.persistentNotificationEnabled);
@@ -85,14 +76,7 @@ export default function SettingsScreen() {
     [presets, setPresets],
   );
 
-  const [recentLogsExpanded, setRecentLogsExpanded] = React.useState(false);
   const [notifPermissionGranted, setNotifPermissionGranted] = React.useState(true);
-
-  React.useEffect(() => {
-    if (viewParam === "recent-logs") {
-      setRecentLogsExpanded(true);
-    }
-  }, [viewParam]);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -121,19 +105,6 @@ export default function SettingsScreen() {
   const horizontalPad = 20;
   const columnGap = 12;
   const goalGlasses = Math.round(goalMl / glassMl);
-
-  const handleRemoveLog = React.useCallback(
-    (id: string) => {
-      impactMedium();
-      removeLog(id);
-    },
-    [removeLog]
-  );
-
-  const toggleRecentLogs = React.useCallback(() => {
-    impactLight();
-    setRecentLogsExpanded((open) => !open);
-  }, []);
 
   const handleReminderToggle = React.useCallback(
     async (next: boolean) => {
@@ -244,7 +215,7 @@ export default function SettingsScreen() {
           />
           <View style={{ flexDirection: "row", gap: 8 }}>
             {DRINK_ICONS.map((iconName) => {
-              const isSelected = glassIcon === iconName;
+              const isSelected = (glassIcon ?? DRINK_ICONS[0]) === iconName;
               return (
                 <Pressable
                   key={iconName}
@@ -526,56 +497,6 @@ export default function SettingsScreen() {
           </SectionCard>
         ) : null}
 
-        <SectionCard variant="soft">
-          <Pressable
-            testID="recent-logs"
-            accessibilityRole="button"
-            accessibilityLabel="Recent logs"
-            accessibilityState={{ expanded: recentLogsExpanded }}
-            onPress={toggleRecentLogs}
-            style={({ pressed }) => ({
-              gap: 4,
-              opacity: pressed ? 0.92 : 1,
-            })}
-          >
-            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-              <Text selectable style={{ fontSize: 16, fontWeight: "700", color: "#0F172A" }}>
-                Recent logs
-              </Text>
-              <View
-                accessibilityElementsHidden
-                importantForAccessibility="no-hide-descendants"
-                style={{
-                  width: 26,
-                  height: 26,
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <Text
-                  style={{
-                    fontSize: 22,
-                    color: "#94A3B8",
-                    fontWeight: "600",
-                    includeFontPadding: false,
-                    ...(recentLogsExpanded && {
-                      transform: [{ translateX: -1 }, { translateY: 2 }, { rotate: "90deg" }],
-                    }),
-                  }}
-                >
-                  ›
-                </Text>
-              </View>
-            </View>
-            <Text selectable style={{ fontSize: 13, color: "#64748B" }}>
-              {recentLogsExpanded
-                ? "Tap header to collapse"
-                : `${logs.length === 0 ? "No entries yet — " : ""}Tap to show`}
-            </Text>
-          </Pressable>
-
-          {recentLogsExpanded ? <LogList logs={logs} onRemove={handleRemoveLog} /> : null}
-        </SectionCard>
       </ScrollView>
     </View>
   );
