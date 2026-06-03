@@ -5,8 +5,8 @@ import { PulseOnChange } from "@/components/pulse-on-change";
 
 type StreakCardProps = {
   streak: number;
-  /** Last 7 days oldest-first; true = goal was met that day */
-  recentDays: boolean[];
+  /** Whether today's goal has been fully met */
+  isComplete: boolean;
 };
 
 function message(streak: number): string {
@@ -17,13 +17,15 @@ function message(streak: number): string {
   return "You're unstoppable.";
 }
 
-export function StreakCard({ streak, recentDays }: StreakCardProps) {
-  const isActive = streak > 0;
+export function StreakCard({ streak, isComplete }: StreakCardProps) {
+  const hasStreak = streak > 0;
+  // Card goes warm only when today's goal is complete; flame icon stays amber whenever there's a streak
+  const isActive = isComplete;
 
   const bg = isActive ? "#FFFBEB" : "#F8FAFC";
   const border = isActive ? "#FDE68A" : "#E2E8F0";
-  const iconBg = isActive ? "#FDE68A" : "#E2E8F0";
-  const iconColor = isActive ? "#D97706" : "#94A3B8";
+  const iconBg = hasStreak ? "#FDE68A" : "#E2E8F0";
+  const iconColor = hasStreak ? "#D97706" : "#94A3B8";
   const labelColor = isActive ? "#B45309" : "#94A3B8";
   const msgColor = isActive ? "#92400E" : "#64748B";
   const dotFilled = isActive ? "#FBBF24" : "#BAE6FD";
@@ -86,7 +88,7 @@ export function StreakCard({ streak, recentDays }: StreakCardProps) {
           }}
         >
           <Ionicons
-            name={isActive ? "flame" : "flame-outline"}
+            name={hasStreak ? "flame" : "flame-outline"}
             size={28}
             color={iconColor}
           />
@@ -122,16 +124,16 @@ export function StreakCard({ streak, recentDays }: StreakCardProps) {
         </View>
       </View>
 
-      {/* 7-day dots — today on the left, 6 days ago on the right */}
+      {/* streak progress dots — leftmost = day 1 of current streak */}
       <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
-        {[...recentDays].reverse().map((hit, i) => (
+        {Array.from({ length: 7 }, (_, i) => (
           <View
             key={i}
             style={{
               flex: 1,
               height: 6,
               borderRadius: 999,
-              backgroundColor: hit ? dotFilled : dotEmpty,
+              backgroundColor: i < streak ? dotFilled : dotEmpty,
             }}
           />
         ))}

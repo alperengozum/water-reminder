@@ -130,11 +130,6 @@ export default function HomeScreen() {
 
   const streak = React.useMemo(() => computeStreak(logs, goalMl), [logs, goalMl]);
 
-  const recentDays = React.useMemo(
-    () => weeklyData.map((day) => day.value >= goalMl),
-    [weeklyData, goalMl],
-  );
-
   const handleAddGlass = React.useCallback(() => {
     addGlass();
     impactMedium();
@@ -210,15 +205,12 @@ export default function HomeScreen() {
     };
   }, [todayMl, goalMl, glassMl, weeklyPaceMl, logs]);
 
-  React.useEffect(() => {
-    if (Platform.OS !== "android") return;
-    setAndroidAppIconComplete(isComplete);
-  }, [isComplete]);
-
+  // Icon swap via setComponentEnabledSetting kills the app when called in the foreground.
+  // Only apply it when the app goes to background — that's when the launcher reads the icon anyway.
   React.useEffect(() => {
     if (Platform.OS !== "android") return;
     const sub = AppState.addEventListener("change", (state) => {
-      if (state === "active") {
+      if (state === "background") {
         const { logs: l, goalMl: g } = useWaterStore.getState();
         const dk = getDayKey(new Date());
         const ml = l.filter((log) => getDayKey(new Date(log.timestamp)) === dk).reduce((s, log) => s + log.amountMl, 0);
@@ -317,7 +309,7 @@ export default function HomeScreen() {
         </View>
       </View>
 
-      <StreakCard streak={streak} recentDays={recentDays} />
+      <StreakCard streak={streak} isComplete={isComplete} />
 
       <View style={{ flexDirection: "row", gap: 12, flexShrink: 0 }}>
         <View style={{ flex: 1 }}>
