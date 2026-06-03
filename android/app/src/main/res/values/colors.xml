@@ -29,4 +29,6 @@
   <color name="widget_compact_log_btn_warm">#FED7AA</color>
   <color name="widget_compact_log_text_warm">#9A3412</color>
   <color name="widget_compact_drop_outline">#0891B2</color>
+  <color name="widget_preset_text">#9A3412</color>
+  <color name="widget_preset_text_warm">#92400E</color>
 </resources>

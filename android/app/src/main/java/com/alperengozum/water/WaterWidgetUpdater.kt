@@ -17,8 +17,10 @@ object WaterWidgetUpdater {
   /** Separate ranges so PendingIntents from standard vs compact widgets never collide at the same numeric id. */
   private const val RC_STANDARD_HOME_OFFSET = 100_000
   private const val RC_STANDARD_GLASS_OFFSET = 101_000
-  private const val RC_STANDARD_QUICK_OFFSET = 102_000
-  private const val RC_STANDARD_ANALYZE_OFFSET = 103_000
+  private const val RC_STANDARD_PRESET0_OFFSET = 102_000
+  private const val RC_STANDARD_PRESET1_OFFSET = 103_000
+  private const val RC_STANDARD_PRESET2_OFFSET = 104_000
+  private const val RC_STANDARD_ANALYZE_OFFSET = 105_000
 
   private const val RC_COMPACT_HOME_OFFSET = 200_000
   private const val RC_COMPACT_GLASS_OFFSET = 201_000
@@ -79,6 +81,8 @@ object WaterWidgetUpdater {
     weeklyPaceMl: Double,
     dayTotalsJson: String? = null,
     snapshotDayKey: String = WaterWidgetStorage.localDayKeyNow(),
+    presetsJson: String? = null,
+    glassIcon: String? = null,
   ) {
     WaterWidgetStorage.write(
       context.applicationContext,
@@ -88,8 +92,64 @@ object WaterWidgetUpdater {
       weeklyPaceMl.toFloat().coerceAtLeast(0f),
       snapshotDayKey,
       dayTotalsJson,
+      presetsJson,
+      glassIcon,
     )
     refreshAllWidgets(context.applicationContext)
+  }
+
+  private fun iconToEmoji(iconName: String?): String? {
+    if (iconName.isNullOrBlank()) return null
+    val base = iconName.lowercase().removeSuffix("-outline").removeSuffix("-sharp")
+    return when (base) {
+      "water" -> "💧"
+      "cafe" -> "☕"
+      "beer" -> "🍺"
+      "wine" -> "🍷"
+      "flask" -> "⚗️"
+      "leaf" -> "🌿"
+      "fitness" -> "💪"
+      "barbell" -> "🏋️"
+      "bicycle" -> "🚴"
+      "walk" -> "🚶"
+      "run" -> "🏃"
+      "nutrition" -> "🥗"
+      "snow" -> "❄️"
+      "sunny" -> "☀️"
+      "moon" -> "🌙"
+      "restaurant" -> "🍽️"
+      "fast-food" -> "🍔"
+      "ice-cream" -> "🍦"
+      "basketball" -> "🏀"
+      "football" -> "⚽"
+      "tennisball" -> "🎾"
+      "medal" -> "🏅"
+      "trophy" -> "🏆"
+      "timer" -> "⏱️"
+      "alarm" -> "⏰"
+      "heart" -> "❤️"
+      "flame" -> "🔥"
+      "star" -> "⭐"
+      "body" -> "🧘"
+      "rose" -> "🌹"
+      "flower" -> "🌸"
+      "pizza" -> "🍕"
+      "fish" -> "🐟"
+      "paw" -> "🐾"
+      "cloud" -> "☁️"
+      "rainy" -> "🌧️"
+      else -> null
+    }
+  }
+
+  private fun presetLabel(entry: PresetEntry): String {
+    val emoji = iconToEmoji(entry.icon)
+    return if (emoji != null) "$emoji ${entry.amountMl.toInt()} ml" else "+${entry.amountMl.toInt()} ml"
+  }
+
+  private fun glassLabel(glassMl: Int, glassIcon: String?): String {
+    val emoji = iconToEmoji(glassIcon)
+    return if (emoji != null) "$emoji $glassMl ml" else "+$glassMl ml"
   }
 
   fun refreshAllWidgets(context: Context) {
@@ -119,7 +179,14 @@ object WaterWidgetUpdater {
     val options = manager.getAppWidgetOptions(appWidgetId)
     val minW = options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 220)
     val showAnalyze = minW >= 200
-    val showQuick = minW >= 170
+    val presets = snapshot.presets
+    val presetsToShow = when {
+      presets.isEmpty() -> 0
+      minW < 160 -> 0
+      minW < 230 -> minOf(1, presets.size)
+      minW < 300 -> minOf(2, presets.size)
+      else -> minOf(3, presets.size)
+    }
 
     views.setInt(
       R.id.widget_root,
@@ -201,26 +268,31 @@ object WaterWidgetUpdater {
       }
     }
 
-    views.setViewVisibility(R.id.widget_btn_quick, if (showQuick) View.VISIBLE else View.GONE)
+    val glassChipBg = if (m.isComplete) R.drawable.widget_chip_warm else R.drawable.widget_chip_cool
+    val glassTextColor = ContextCompat.getColor(
+      context,
+      if (m.isComplete) R.color.widget_btn_warm_text else R.color.widget_text_cool,
+    )
+    val presetChipBg = if (m.isComplete) R.drawable.widget_chip_warm else R.drawable.widget_chip_preset
+    val presetTextColor = ContextCompat.getColor(
+      context,
+      if (m.isComplete) R.color.widget_preset_text_warm else R.color.widget_preset_text,
+    )
 
-    val chipBg =
-      if (m.isComplete) {
-        R.drawable.widget_chip_warm
-      } else {
-        R.drawable.widget_chip_cool
+    views.setInt(R.id.widget_btn_glass, "setBackgroundResource", glassChipBg)
+    views.setTextViewText(R.id.widget_btn_glass, glassLabel(m.glassInt, snapshot.glassIcon))
+    views.setTextColor(R.id.widget_btn_glass, glassTextColor)
+
+    val presetIds = listOf(R.id.widget_btn_preset_0, R.id.widget_btn_preset_1, R.id.widget_btn_preset_2)
+    presetIds.forEachIndexed { i, viewId ->
+      val visible = i < presetsToShow
+      views.setViewVisibility(viewId, if (visible) View.VISIBLE else View.GONE)
+      if (visible) {
+        views.setInt(viewId, "setBackgroundResource", presetChipBg)
+        views.setTextViewText(viewId, presetLabel(presets[i]))
+        views.setTextColor(viewId, presetTextColor)
       }
-    val btnTextColor =
-      ContextCompat.getColor(
-        context,
-        if (m.isComplete) R.color.widget_btn_warm_text else R.color.widget_text_cool,
-      )
-
-    views.setInt(R.id.widget_btn_glass, "setBackgroundResource", chipBg)
-    views.setInt(R.id.widget_btn_quick, "setBackgroundResource", chipBg)
-    views.setTextViewText(R.id.widget_btn_glass, context.getString(R.string.widget_btn_glass, m.glassInt))
-    views.setTextViewText(R.id.widget_btn_quick, context.getString(R.string.widget_btn_quick))
-    views.setTextColor(R.id.widget_btn_glass, btnTextColor)
-    views.setTextColor(R.id.widget_btn_quick, btnTextColor)
+    }
 
     val homePi =
       PendingIntent.getActivity(
@@ -245,10 +317,14 @@ object WaterWidgetUpdater {
       R.id.widget_btn_glass,
       broadcastPi(WaterWidgetReceiver.ACTION_ADD_GLASS, RC_STANDARD_GLASS_OFFSET),
     )
-    views.setOnClickPendingIntent(
-      R.id.widget_btn_quick,
-      broadcastPi(WaterWidgetReceiver.ACTION_ADD_QUICK, RC_STANDARD_QUICK_OFFSET),
+    val presetActions = listOf(
+      Triple(R.id.widget_btn_preset_0, WaterWidgetReceiver.ACTION_ADD_PRESET_0, RC_STANDARD_PRESET0_OFFSET),
+      Triple(R.id.widget_btn_preset_1, WaterWidgetReceiver.ACTION_ADD_PRESET_1, RC_STANDARD_PRESET1_OFFSET),
+      Triple(R.id.widget_btn_preset_2, WaterWidgetReceiver.ACTION_ADD_PRESET_2, RC_STANDARD_PRESET2_OFFSET),
     )
+    presetActions.forEach { (viewId, action, rcOffset) ->
+      views.setOnClickPendingIntent(viewId, broadcastPi(action, rcOffset))
+    }
     views.setOnClickPendingIntent(
       R.id.widget_analyze_row,
       broadcastPi(WaterWidgetReceiver.ACTION_ANALYZE, RC_STANDARD_ANALYZE_OFFSET),

@@ -1,6 +1,6 @@
 {
   "name": "water-reminder",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "main": "expo-router/entry",
   "scripts": {
     "start": "expo start",
@@ -8,7 +8,8 @@
     "ios": "expo run:ios",
     "web": "expo start --web",
     "deploy": "npx expo export -p web && npx eas-cli@latest deploy",
-    "eas:build:android:local": "npx eas-cli@latest build --platform android --profile production --local --non-interactive --output ./dist/water-reminder.aab"
+    "eas:build:android:local": "npx eas-cli@latest build --platform android --profile production --local --non-interactive --output ./dist/water-reminder.aab",
+    "eas:submit:android": "npx eas-cli@latest submit --platform android --profile production --non-interactive --path ./dist/water-reminder.aab"
   },
   "dependencies": {
     "@expo-google-fonts/dm-sans": "^0.4.2",

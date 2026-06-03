@@ -7,12 +7,12 @@
       "expo-notifications"
     ],
     "name": "Water Reminder",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "slug": "water-reminder",
     "icon": "./water.png",
     "android": {
       "package": "com.alperengozum.water",
-      "versionCode": 3,
+      "versionCode": 4,
       "adaptiveIcon": {
         "foregroundImage": "./water.png",
         "backgroundColor": "#E0F2FE"

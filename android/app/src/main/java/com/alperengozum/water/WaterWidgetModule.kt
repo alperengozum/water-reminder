@@ -44,6 +44,9 @@ class WaterWidgetModule(private val reactContext: ReactApplicationContext) :
           config.getString("dayKey") ?: WaterWidgetStorage.localDayKeyNow()
         else -> WaterWidgetStorage.localDayKeyNow()
       }
+    val presetsJson = presetsToJson(config)
+    val glassIcon =
+      if (config.hasKey("glassIcon") && !config.isNull("glassIcon")) config.getString("glassIcon") else null
     WaterWidgetUpdater.saveAndRefresh(
       reactContext,
       todayMl,
@@ -52,7 +55,26 @@ class WaterWidgetModule(private val reactContext: ReactApplicationContext) :
       weeklyPaceMl,
       dayTotalsJson,
       snapshotDayKey,
+      presetsJson,
+      glassIcon,
     )
+  }
+
+  private fun presetsToJson(config: ReadableMap): String? {
+    if (!config.hasKey("presets") || config.isNull("presets")) return null
+    val arr = config.getArray("presets") ?: return null
+    val jsonArr = org.json.JSONArray()
+    for (i in 0 until arr.size()) {
+      val item = arr.getMap(i) ?: continue
+      if (!item.hasKey("amountMl")) continue
+      val obj = org.json.JSONObject()
+      obj.put("amountMl", item.getDouble("amountMl"))
+      if (item.hasKey("icon") && !item.isNull("icon")) {
+        obj.put("icon", item.getString("icon"))
+      }
+      jsonArr.put(obj)
+    }
+    return jsonArr.toString()
   }
 
   private fun weeklyDayTotalsToJson(config: ReadableMap): String? {

@@ -8,7 +8,7 @@
   <string name="widget_primary_line">%1$d / %2$d ml · %3$d ml glass</string>
   <string name="widget_analyze_line">7-day avg · %1$d ml</string>
   <string name="widget_btn_glass">+%1$d ml</string>
-  <string name="widget_btn_quick">+100 ml</string>
+  <string name="widget_btn_quick">+100 ml</string><!-- kept for backward compat, not used in layouts -->
   <string name="widget_goal_reached">Goal reached</string>
   <string name="notif_channel_name">Water Reminder</string>
   <string name="notif_channel_desc">Today\'s progress and quick add from the notification</string>
@@ -25,7 +25,8 @@
   <string name="widget_preview_primary">1,200 / 2,000 ml · 250 ml glass</string>
   <string name="widget_preview_analyze">7-day avg · 1,850 ml</string>
   <string name="widget_preview_btn_glass">+250 ml</string>
-  <string name="widget_preview_btn_quick">+100 ml</string>
+  <string name="widget_preview_btn_preset_0">+330 ml</string>
+  <string name="widget_preview_btn_preset_1">+500 ml</string>
   <!-- Legacy strings (safe to remove if unused) -->
   <string name="widget_water_line_primary">%1$d ml · Goal %2$d ml</string>
   <string name="widget_water_line_secondary">%1$d%% · %2$d ml glass</string>

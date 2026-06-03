@@ -18,6 +18,8 @@ object WaterWidgetStorage {
   private const val KEY_PENDING_LOGS = "pending_logs_json"
   private const val KEY_PERSISTENT_NOTIFICATION = "persistent_notification_enabled"
   private const val KEY_SNAPSHOT_DAY = "snapshot_day_yyyy_MM_dd"
+  private const val KEY_PRESETS_JSON = "presets_json"
+  private const val KEY_GLASS_ICON = "glass_icon"
 
   fun localDayKeyNow(): String {
     val fmt = SimpleDateFormat("yyyy-MM-dd", Locale.US)
@@ -47,6 +49,8 @@ object WaterWidgetStorage {
     weeklyPaceMl: Float,
     snapshotDayKey: String,
     dayTotalsJson: String? = null,
+    presetsJson: String? = null,
+    glassIcon: String? = null,
   ) {
     context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().apply {
       putFloat(KEY_TODAY_ML, todayMl)
@@ -54,9 +58,9 @@ object WaterWidgetStorage {
       putFloat(KEY_GLASS_ML, glassMl)
       putFloat(KEY_WEEKLY_PACE_ML, weeklyPaceMl.coerceAtLeast(0f))
       putString(KEY_SNAPSHOT_DAY, snapshotDayKey)
-      if (dayTotalsJson != null) {
-        putString(KEY_DAY_TOTALS_JSON, dayTotalsJson)
-      }
+      if (dayTotalsJson != null) putString(KEY_DAY_TOTALS_JSON, dayTotalsJson)
+      if (presetsJson != null) putString(KEY_PRESETS_JSON, presetsJson)
+      if (glassIcon != null) putString(KEY_GLASS_ICON, glassIcon)
       apply()
     }
   }
@@ -69,7 +73,23 @@ object WaterWidgetStorage {
       glassMl = prefs.getFloat(KEY_GLASS_ML, 250f).coerceAtLeast(1f),
       weeklyPaceMl = prefs.getFloat(KEY_WEEKLY_PACE_ML, 0f).coerceAtLeast(0f),
       snapshotDayKey = prefs.getString(KEY_SNAPSHOT_DAY, null),
+      presets = parsePresetsJson(prefs.getString(KEY_PRESETS_JSON, null)),
+      glassIcon = prefs.getString(KEY_GLASS_ICON, null),
     )
+  }
+
+  private fun parsePresetsJson(json: String?): List<PresetEntry> {
+    if (json.isNullOrEmpty()) return emptyList()
+    return try {
+      val arr = JSONArray(json)
+      (0 until arr.length()).mapNotNull { i ->
+        val obj = arr.getJSONObject(i)
+        val ml = obj.getDouble("amountMl").toFloat()
+        if (ml <= 0f) null else PresetEntry(ml, obj.optString("icon", null).takeIf { it.isNotEmpty() })
+      }
+    } catch (_: Exception) {
+      emptyList()
+    }
   }
 
   fun appendPending(context: Context, amountMl: Float, source: String) {
@@ -221,7 +241,11 @@ data class WidgetSnapshot(
   val glassMl: Float,
   val weeklyPaceMl: Float,
   val snapshotDayKey: String?,
+  val presets: List<PresetEntry> = emptyList(),
+  val glassIcon: String? = null,
 )
+
+data class PresetEntry(val amountMl: Float, val icon: String?)
 
 data class WaterWidgetDisplayMetrics(
   val todayInt: Int,
