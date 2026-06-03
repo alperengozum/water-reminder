@@ -206,6 +206,13 @@ export default function HistoryScreen() {
     return { chartStepValue: stepValue, chartSections: sections };
   }, [last30, goalMl]);
 
+  const yAxisLabelWidth = 55;
+  const chartContainerWidth = width - horizontalPad * 2 - sectionCardPadding * 2;
+  const barsAreaWidth = chartContainerWidth - yAxisLabelWidth;
+  const barPlusGap = barsAreaWidth / 30;
+  const chartBarWidth = Math.max(3, Math.floor(barPlusGap * 0.65));
+  const chartSpacing = Math.max(1, Math.floor(barPlusGap * 0.35));
+
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: "#F8FAFC" }}
@@ -384,8 +391,10 @@ export default function HistoryScreen() {
         ) : (
           <BarChart
             data={chartData}
-            barWidth={7}
-            spacing={3}
+            width={barsAreaWidth}
+            barWidth={chartBarWidth}
+            spacing={chartSpacing}
+            yAxisLabelWidth={yAxisLabelWidth}
             roundedTop
             yAxisThickness={0}
             xAxisThickness={0}
