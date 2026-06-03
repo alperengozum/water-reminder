@@ -54,7 +54,7 @@ const creator: StateCreator<WaterState> = (set, get) => ({
   glassMl: defaultGlassMl,
   logs: [],
   persistentNotificationEnabled: false,
-  glassIcon: undefined,
+  glassIcon: "water-outline",
   presets: defaultPresets,
   reminderEnabled: false,
   reminderIntervalHours: 2,
