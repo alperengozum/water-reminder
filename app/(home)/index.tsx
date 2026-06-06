@@ -58,13 +58,13 @@ export default function HomeScreen() {
   const todayGlasses = todayMl / glassMl;
   const isComplete = todayMl >= goalMl && goalMl > 0;
 
-  // 0–1 fraction of the reminder window elapsed; null when outside the window or complete
+  // 0–1 fraction of the drinking window elapsed; null when outside the window or complete
   const windowProgress = React.useMemo(() => {
-    if (isComplete || !reminderEnabled) return null;
+    if (isComplete) return null;
     const hour = new Date().getHours() + new Date().getMinutes() / 60;
     if (hour <= reminderStartHour || hour >= reminderEndHour) return null;
     return (hour - reminderStartHour) / (reminderEndHour - reminderStartHour);
-  }, [isComplete, reminderEnabled, reminderStartHour, reminderEndHour]);
+  }, [isComplete, reminderStartHour, reminderEndHour]);
 
   // Glasses behind schedule: positive = behind, negative = ahead
   const pacingBehindGlasses = React.useMemo(() => {
@@ -74,15 +74,22 @@ export default function HomeScreen() {
   }, [windowProgress, todayMl, goalMl, glassMl]);
 
   const hoursLeftInWindow = React.useMemo(() => {
-    if (!reminderEnabled) return null;
     const hour = new Date().getHours() + new Date().getMinutes() / 60;
     if (hour >= reminderEndHour) return null;
     return Math.ceil(reminderEndHour - hour);
-  }, [reminderEnabled, reminderEndHour]);
+  }, [reminderEndHour]);
 
   const summary = React.useMemo(() => {
     const rounded = Math.round(todayGlasses * 10) / 10;
-    if (rounded <= 0) return "Let's start with a calm sip.";
+    const hour = new Date().getHours();
+    if (rounded <= 0) {
+      if (hour < 10) {
+        return streak > 0
+          ? `Good morning — day ${streak + 1} starts now.`
+          : "Good morning — start your day with a glass.";
+      }
+      return "Let's start with a calm sip.";
+    }
     if (pacingBehindGlasses >= 2) {
       const suffix = hoursLeftInWindow != null ? `${hoursLeftInWindow}h left today` : "drink up";
       return `${Math.round(pacingBehindGlasses)} glasses behind — ${suffix}.`;
@@ -92,11 +99,19 @@ export default function HomeScreen() {
       return `1 glass behind — ${suffix}.`;
     }
     if (pacingBehindGlasses <= -1) return "Ahead of schedule. Keep it up.";
+    if (hour >= 20 && !isComplete) return "Last chance to hit your goal tonight.";
     if (rounded === 1) return "1 glass in. On pace.";
     return `${rounded} glasses in the tank.`;
-  }, [todayGlasses, pacingBehindGlasses, hoursLeftInWindow]);
+  }, [todayGlasses, pacingBehindGlasses, hoursLeftInWindow, streak, isComplete]);
 
   const remainingGlasses = Math.max(0, Math.ceil((goalMl - todayMl) / glassMl));
+
+  const isSprintMode = pacingBehindGlasses >= 2 && hoursLeftInWindow !== null && hoursLeftInWindow <= 3;
+
+  const catchUpIntervalMinutes = React.useMemo(() => {
+    if (remainingGlasses === 0 || hoursLeftInWindow === null) return null;
+    return Math.round((hoursLeftInWindow * 60) / remainingGlasses);
+  }, [remainingGlasses, hoursLeftInWindow]);
 
   const pageBackground = isComplete ? "#FFFBEB" : "#F8FAFC";
   const heroBackground = isComplete ? "#FEF3C7" : "#ECFEFF";
@@ -365,6 +380,77 @@ export default function HomeScreen() {
           />
         </View>
       </View>
+
+      {isSprintMode && (
+        <Pressable
+          onPress={handleAddGlass}
+          hitSlop={4}
+          style={({ pressed }) => ({
+            backgroundColor: "#FEF2F2",
+            borderRadius: 18,
+            borderCurve: "continuous",
+            padding: 14,
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 12,
+            borderWidth: 1,
+            borderColor: "#FCA5A5",
+            flexShrink: 0,
+            opacity: pressed ? 0.8 : 1,
+          })}
+          accessibilityLabel="Log a glass to catch up"
+          accessibilityRole="button"
+        >
+          <View style={{ flex: 1, gap: 3 }}>
+            <Text selectable style={{ fontSize: 13, fontWeight: "700", color: "#DC2626" }}>
+              Sprint time
+            </Text>
+            <Text selectable style={{ fontSize: 12, color: "#B91C1C" }}>
+              {Math.round(pacingBehindGlasses)} glasses behind · {hoursLeftInWindow}h left — drink up
+            </Text>
+          </View>
+          <View
+            style={{
+              backgroundColor: "#FCA5A5",
+              borderRadius: 12,
+              borderCurve: "continuous",
+              paddingHorizontal: 12,
+              paddingVertical: 6,
+            }}
+          >
+            <Text style={{ fontSize: 12, fontWeight: "700", color: "#7F1D1D" }}>Log glass</Text>
+          </View>
+        </Pressable>
+      )}
+
+      {!isSprintMode && pacingBehindGlasses >= 1 && (
+        <View
+          style={{
+            backgroundColor: "#FFF7ED",
+            borderRadius: 18,
+            borderCurve: "continuous",
+            padding: 14,
+            borderWidth: 1,
+            borderColor: "#FED7AA",
+            gap: 3,
+            flexShrink: 0,
+          }}
+        >
+          <Text selectable style={{ fontSize: 13, fontWeight: "700", color: "#C2410C" }}>
+            {Math.round(pacingBehindGlasses) === 1 ? "1 glass behind" : `${Math.round(pacingBehindGlasses)} glasses behind`}
+            {hoursLeftInWindow !== null ? ` · ${hoursLeftInWindow}h left` : ""}
+          </Text>
+          {catchUpIntervalMinutes !== null && (
+            <Text selectable style={{ fontSize: 12, color: "#EA580C" }}>
+              {"Aim for 1 glass every "}
+              {catchUpIntervalMinutes < 60
+                ? `${catchUpIntervalMinutes}m`
+                : `${Math.round((catchUpIntervalMinutes / 60) * 10) / 10}h`}
+              {" to catch up"}
+            </Text>
+          )}
+        </View>
+      )}
 
       <View style={{ flex: 1, minHeight: 0 }}>
         <SectionCard title="Daily flow" variant="soft">
