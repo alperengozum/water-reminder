@@ -1,6 +1,6 @@
 import React from "react";
 import { Ionicons } from "@expo/vector-icons";
-import { AppState, Platform, Pressable, Text, UIManager, View } from "react-native";
+import { AppState, Platform, Pressable, ScrollView, Text, UIManager, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { MetricCard } from "@/components/metric-card";
@@ -321,16 +321,16 @@ export default function HomeScreen() {
   const columnGap = 12;
 
   return (
-    <View
-      style={{
-        flex: 1,
-        backgroundColor: pageBackground,
-        paddingTop: insets.top + 8,
-        paddingBottom: Math.max(insets.bottom, 12),
-        paddingHorizontal: horizontalPad,
-        gap: columnGap,
-      }}
-    >
+    <View style={{ flex: 1, backgroundColor: pageBackground }}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{
+          paddingTop: insets.top + 8,
+          paddingBottom: Math.max(insets.bottom, 12) + 72,
+          paddingHorizontal: horizontalPad,
+          gap: columnGap,
+        }}
+      >
       <View
         style={{
           flexShrink: 0,
@@ -504,27 +504,24 @@ export default function HomeScreen() {
         </View>
       )}
 
-      <View style={{ flex: 1, minHeight: 0 }}>
-        <SectionCard title={t.dailyFlow} variant="soft">
-          <View style={{ flexShrink: 1 }}>
-            <ProgressWidget
-              consumedMl={todayMl}
-              goalMl={goalMl}
-              glassMl={glassMl}
-              pacingProgress={windowProgress ?? undefined}
-              quickAdd={{
-                glassLabel: `${glassMl} ml`,
-                glassIcon,
-                presets,
-                onAddGlass: handleAddGlass,
-                onAddCustom: handleAddCustom,
-              }}
-            />
-          </View>
+      <SectionCard title={t.dailyFlow} variant="soft">
+          <ProgressWidget
+            consumedMl={todayMl}
+            goalMl={goalMl}
+            glassMl={glassMl}
+            pacingProgress={windowProgress ?? undefined}
+            quickAdd={{
+              glassLabel: `${glassMl} ml`,
+              glassIcon,
+              presets,
+              onAddGlass: handleAddGlass,
+              onAddCustom: handleAddCustom,
+            }}
+          />
           <View style={{ height: 1, backgroundColor: "#E2E8F0", marginVertical: 4 }} />
           <WeeklyChart data={weeklyData} goalMl={goalMl} />
         </SectionCard>
-      </View>
+      </ScrollView>
 
       {undoEntry && (
         <View
