@@ -26,7 +26,6 @@ object WaterWidgetUpdater {
   private const val RC_COMPACT_GLASS_OFFSET = 201_000
 
   private const val RC_STREAK_HOME_OFFSET = 300_000
-  private const val RC_STREAK_GLASS_OFFSET = 301_000
 
   private val widgetProviderClasses: Array<Class<out AppWidgetProvider>> =
     arrayOf(WaterWidgetProvider::class.java, WaterCompactWidgetProvider::class.java, WaterStreakWidgetProvider::class.java)
