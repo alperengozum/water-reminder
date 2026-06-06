@@ -13,7 +13,7 @@ import { addDays, getDayKey, getShortWeekday, startOfDay } from "@/lib/date";
 import { formatGlasses, formatMl } from "@/lib/format";
 import { computeStreak } from "@/lib/streak";
 import { impactMedium, notifySuccess } from "@/lib/haptics";
-import { cancelWaterReminders, scheduleWaterReminders } from "@/lib/notifications";
+import { cancelStreakAtRiskAlert, cancelWaterReminders, scheduleStreakAtRiskAlert, scheduleWaterReminders } from "@/lib/notifications";
 import { flushWidgetPendingAdds, setAndroidAppIconComplete, syncAndroidWaterWidgetFromStore } from "@/lib/widget";
 import { useWaterStore, waitForWaterStoreHydration } from "@/store/use-water-store";
 
@@ -30,6 +30,7 @@ export default function HomeScreen() {
   const reminderIntervalHours = useWaterStore((state) => state.reminderIntervalHours);
   const reminderStartHour = useWaterStore((state) => state.reminderStartHour);
   const reminderEndHour = useWaterStore((state) => state.reminderEndHour);
+  const streakAlertEnabled = useWaterStore((state) => state.streakAlertEnabled);
 
   const insets = useSafeAreaInsets();
 
@@ -182,11 +183,14 @@ export default function HomeScreen() {
         void cancelWaterReminders();
       } else {
         const lastDrink = s.logs.find((l) => getDayKey(new Date(l.timestamp)) === key);
+        const streakVal = computeStreak(s.logs, s.goalMl);
+        const remainingGlasses = Math.max(0, Math.ceil((s.goalMl - ml) / s.glassMl));
         void scheduleWaterReminders(
           s.reminderIntervalHours,
           s.reminderStartHour,
           s.reminderEndHour,
           lastDrink ? new Date(lastDrink.timestamp) : undefined,
+          s.streakAlertEnabled ? { streak: streakVal, remainingGlasses } : undefined,
         );
       }
     });
@@ -212,9 +216,10 @@ export default function HomeScreen() {
         reminderStartHour,
         reminderEndHour,
         lastDrink ? new Date(lastDrink.timestamp) : undefined,
+        streakAlertEnabled ? { streak, remainingGlasses } : undefined,
       );
     }
-  }, [isComplete, reminderEnabled, reminderIntervalHours, reminderStartHour, reminderEndHour]);
+  }, [isComplete, reminderEnabled, reminderIntervalHours, reminderStartHour, reminderEndHour, streakAlertEnabled, streak, remainingGlasses]);
 
   // Drink-aware reschedule: push the next reminder out by intervalHours from each drink,
   // so a notification never fires shortly after the user already logged water.
@@ -231,8 +236,19 @@ export default function HomeScreen() {
       reminderStartHour,
       reminderEndHour,
       new Date(latestLog.timestamp),
+      streakAlertEnabled ? { streak, remainingGlasses } : undefined,
     );
-  }, [logs, reminderEnabled, isComplete, reminderIntervalHours, reminderStartHour, reminderEndHour, todayKey]);
+  }, [logs, reminderEnabled, isComplete, reminderIntervalHours, reminderStartHour, reminderEndHour, todayKey, streak, remainingGlasses, streakAlertEnabled]);
+
+  // When reminders are off but streak alert is on, manage the streak notification independently.
+  React.useEffect(() => {
+    if (reminderEnabled) return; // scheduleWaterReminders handles it
+    if (!streakAlertEnabled || isComplete || streak === 0 || remainingGlasses === 0) {
+      void cancelStreakAtRiskAlert();
+      return;
+    }
+    void scheduleStreakAtRiskAlert(streak, remainingGlasses, reminderEndHour, reminderStartHour);
+  }, [reminderEnabled, streakAlertEnabled, isComplete, streak, remainingGlasses, reminderEndHour, reminderStartHour]);
 
   React.useEffect(() => {
     if (Platform.OS === "android" && UIManager.setLayoutAnimationEnabledExperimental) {

@@ -42,12 +42,16 @@ function isSameCalendarDay(a: Date, b: Date): boolean {
  * When lastDrinkAt is provided, today's first reminder fires at lastDrinkAt + intervalHours
  * instead of the fixed startHour — so drinking early pushes the next nudge out rather than
  * firing on a rigid clock.  Future days always start at startHour.
+ *
+ * When streakAlert is provided and the streak is live, a single notification is scheduled
+ * 1 hour before endHour today — "your streak is at risk" — if that time is still in the future.
  */
 export async function scheduleWaterReminders(
   intervalHours: number,
   startHour: number,
   endHour: number,
   lastDrinkAt?: Date,
+  streakAlert?: { streak: number; remainingGlasses: number },
 ): Promise<void> {
   await Notifications.cancelAllScheduledNotificationsAsync();
 
@@ -122,6 +126,53 @@ export async function scheduleWaterReminders(
       totalMinutes += intervalHours * 60;
     }
   }
+
+  if (streakAlert) {
+    await _doScheduleStreakAlert(streakAlert.streak, streakAlert.remainingGlasses, endHour, startHour, now);
+  }
+}
+
+const STREAK_ALERT_ID = "water-streak-at-risk";
+
+async function _doScheduleStreakAlert(
+  streak: number,
+  remainingGlasses: number,
+  endHour: number,
+  startHour: number,
+  now: Date,
+): Promise<void> {
+  const alertHour = endHour - 1;
+  if (streak <= 0 || remainingGlasses <= 0 || alertHour <= startHour) return;
+  const alertDate = new Date(now);
+  alertDate.setHours(alertHour, 0, 0, 0);
+  if (alertDate.getTime() <= now.getTime()) return;
+  await Notifications.scheduleNotificationAsync({
+    identifier: STREAK_ALERT_ID,
+    content: {
+      title: `${streak}-day streak at risk 🔥`,
+      body: `${remainingGlasses} glass${remainingGlasses === 1 ? "" : "es"} left to protect it.`,
+      sound: true,
+    },
+    trigger: {
+      type: Notifications.SchedulableTriggerInputTypes.DATE,
+      date: alertDate,
+      channelId: "water-reminders",
+    },
+  });
+}
+
+export async function scheduleStreakAtRiskAlert(
+  streak: number,
+  remainingGlasses: number,
+  endHour: number,
+  startHour: number,
+): Promise<void> {
+  await Notifications.cancelScheduledNotificationAsync(STREAK_ALERT_ID);
+  await _doScheduleStreakAlert(streak, remainingGlasses, endHour, startHour, new Date());
+}
+
+export async function cancelStreakAtRiskAlert(): Promise<void> {
+  await Notifications.cancelScheduledNotificationAsync(STREAK_ALERT_ID);
 }
 
 export async function cancelWaterReminders(): Promise<void> {

@@ -6,11 +6,14 @@ import { useFocusEffect } from "expo-router";
 import { SectionCard } from "@/components/section-card";
 import { Stepper } from "@/components/stepper";
 import { getDayKey } from "@/lib/date";
+import { computeStreak } from "@/lib/streak";
 import { impactLight, impactMedium } from "@/lib/haptics";
 import {
+  cancelStreakAtRiskAlert,
   cancelWaterReminders,
   checkNotificationsPermission,
   requestNotificationsPermission,
+  scheduleStreakAtRiskAlert,
   scheduleWaterReminders,
 } from "@/lib/notifications";
 import {
@@ -50,10 +53,12 @@ export default function SettingsScreen() {
   const reminderIntervalHours = useWaterStore((state) => state.reminderIntervalHours);
   const reminderStartHour = useWaterStore((state) => state.reminderStartHour);
   const reminderEndHour = useWaterStore((state) => state.reminderEndHour);
+  const streakAlertEnabled = useWaterStore((state) => state.streakAlertEnabled);
   const setReminderEnabled = useWaterStore((state) => state.setReminderEnabled);
   const setReminderIntervalHours = useWaterStore((state) => state.setReminderIntervalHours);
   const setReminderStartHour = useWaterStore((state) => state.setReminderStartHour);
   const setReminderEndHour = useWaterStore((state) => state.setReminderEndHour);
+  const setStreakAlertEnabled = useWaterStore((state) => state.setStreakAlertEnabled);
 
   const updatePreset = React.useCallback(
     (index: number, patch: Partial<QuickPreset>) => {
@@ -100,15 +105,21 @@ export default function SettingsScreen() {
   React.useEffect(() => {
     if (!reminderEnabled) return;
     const key = getDayKey(new Date());
-    const { logs } = useWaterStore.getState();
+    const { logs, goalMl: gMl, glassMl: glMl } = useWaterStore.getState();
     const lastDrink = logs.find((l) => getDayKey(new Date(l.timestamp)) === key);
+    const todayMl = logs
+      .filter((l) => getDayKey(new Date(l.timestamp)) === key)
+      .reduce((sum, l) => sum + l.amountMl, 0);
+    const streak = computeStreak(logs, gMl);
+    const remainingGlasses = Math.max(0, Math.ceil((gMl - todayMl) / glMl));
     void scheduleWaterReminders(
       reminderIntervalHours,
       reminderStartHour,
       reminderEndHour,
       lastDrink ? new Date(lastDrink.timestamp) : undefined,
+      streakAlertEnabled ? { streak, remainingGlasses } : undefined,
     );
-  }, [reminderEnabled, reminderIntervalHours, reminderStartHour, reminderEndHour]);
+  }, [reminderEnabled, reminderIntervalHours, reminderStartHour, reminderEndHour, streakAlertEnabled]);
 
   const insets = useSafeAreaInsets();
   const horizontalPad = 20;
@@ -138,9 +149,53 @@ export default function SettingsScreen() {
       }
       setNotifPermissionGranted(true);
       setReminderEnabled(true);
-      await scheduleWaterReminders(reminderIntervalHours, reminderStartHour, reminderEndHour);
+      const key = getDayKey(new Date());
+      const { logs, goalMl: gMl, glassMl: glMl } = useWaterStore.getState();
+      const todayMl = logs
+        .filter((l) => getDayKey(new Date(l.timestamp)) === key)
+        .reduce((sum, l) => sum + l.amountMl, 0);
+      const streak = computeStreak(logs, gMl);
+      const remainingGlasses = Math.max(0, Math.ceil((gMl - todayMl) / glMl));
+      await scheduleWaterReminders(reminderIntervalHours, reminderStartHour, reminderEndHour, undefined, streakAlertEnabled ? { streak, remainingGlasses } : undefined);
     },
     [reminderIntervalHours, reminderStartHour, reminderEndHour, setReminderEnabled],
+  );
+
+  const handleStreakAlertToggle = React.useCallback(
+    async (next: boolean) => {
+      impactLight();
+      if (!next) {
+        setStreakAlertEnabled(false);
+        await cancelStreakAtRiskAlert();
+        return;
+      }
+      const granted = await requestNotificationsPermission();
+      if (!granted) {
+        Alert.alert(
+          "Notifications blocked",
+          "Enable notifications for Water Reminder in your device settings to receive the streak alert.",
+          [
+            { text: "Not now", style: "cancel" },
+            { text: "Open Settings", onPress: () => Linking.openSettings() },
+          ],
+        );
+        return;
+      }
+      setStreakAlertEnabled(true);
+      // When reminders are off, schedule the streak alert independently right now.
+      // When reminders are on, the settings-change effect re-runs scheduleWaterReminders which includes it.
+      if (!reminderEnabled) {
+        const key = getDayKey(new Date());
+        const { logs, goalMl: gMl, glassMl: glMl } = useWaterStore.getState();
+        const todayMl = logs
+          .filter((l) => getDayKey(new Date(l.timestamp)) === key)
+          .reduce((sum, l) => sum + l.amountMl, 0);
+        const streak = computeStreak(logs, gMl);
+        const remainingGlasses = Math.max(0, Math.ceil((gMl - todayMl) / glMl));
+        await scheduleStreakAtRiskAlert(streak, remainingGlasses, reminderEndHour, reminderStartHour);
+      }
+    },
+    [reminderEnabled, reminderEndHour, reminderStartHour, setStreakAlertEnabled],
   );
 
   const onPersistentNotificationChange = React.useCallback(
@@ -458,6 +513,31 @@ export default function SettingsScreen() {
               />
             </>
           )}
+          <View style={{ height: 1, backgroundColor: "#E2E8F0" }} />
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 16,
+            }}
+          >
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text selectable style={{ fontSize: 15, fontWeight: "600", color: "#334155" }}>
+                Streak at risk alert
+              </Text>
+              <Text selectable style={{ fontSize: 13, color: "#64748B" }}>
+                Fires 1 hour before window ends when streak is active
+              </Text>
+            </View>
+            <Switch
+              accessibilityLabel="Streak at risk alert"
+              value={streakAlertEnabled}
+              onValueChange={handleStreakAlertToggle}
+              trackColor={{ false: "#CBD5E1", true: "#99F6E4" }}
+              thumbColor={streakAlertEnabled ? "#0D9488" : "#F1F5F9"}
+            />
+          </View>
         </SectionCard>
 
         {Platform.OS === "android" ? (

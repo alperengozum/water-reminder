@@ -34,10 +34,12 @@ type WaterState = {
   setPersistentNotificationEnabled: (enabled: boolean) => void;
   setGlassIcon: (icon: string | undefined) => void;
   setPresets: (presets: QuickPreset[]) => void;
+  streakAlertEnabled: boolean;
   setReminderEnabled: (enabled: boolean) => void;
   setReminderIntervalHours: (hours: number) => void;
   setReminderStartHour: (hour: number) => void;
   setReminderEndHour: (hour: number) => void;
+  setStreakAlertEnabled: (enabled: boolean) => void;
 };
 
 const defaultGlassMl = 250;
@@ -60,6 +62,7 @@ const creator: StateCreator<WaterState> = (set, get) => ({
   reminderIntervalHours: 2,
   reminderStartHour: 8,
   reminderEndHour: 22,
+  streakAlertEnabled: true,
   addGlass: () => {
     const { glassMl } = get();
     const log: WaterLog = {
@@ -102,6 +105,7 @@ const creator: StateCreator<WaterState> = (set, get) => ({
   setReminderIntervalHours: (hours) => set({ reminderIntervalHours: hours }),
   setReminderStartHour: (hour) => set({ reminderStartHour: hour }),
   setReminderEndHour: (hour) => set({ reminderEndHour: hour }),
+  setStreakAlertEnabled: (enabled) => set({ streakAlertEnabled: enabled }),
 });
 
 export const useWaterStore = create<WaterState>()(
@@ -119,6 +123,7 @@ export const useWaterStore = create<WaterState>()(
       reminderIntervalHours: state.reminderIntervalHours,
       reminderStartHour: state.reminderStartHour,
       reminderEndHour: state.reminderEndHour,
+      streakAlertEnabled: state.streakAlertEnabled,
     }),
   }),
 );
