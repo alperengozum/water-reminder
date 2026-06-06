@@ -17,6 +17,9 @@ object WaterPersistentNotification {
   private const val RC_OPEN_APP = 300
   private const val RC_ADD_GLASS = 301
   private const val RC_ADD_QUICK = 302
+  private const val RC_DELETE = 303
+
+  const val ACTION_NOTIFICATION_DELETED = "com.alperengozum.water.action.NOTIF_DISMISSED"
 
   fun refresh(context: Context) {
     val app = context.applicationContext
@@ -95,6 +98,14 @@ object WaterPersistentNotification {
         broadcastPi(WaterWidgetReceiver.ACTION_ADD_QUICK, RC_ADD_QUICK),
       ).build()
 
+    val deletePi =
+      PendingIntent.getBroadcast(
+        app,
+        RC_DELETE,
+        Intent(ACTION_NOTIFICATION_DELETED).apply { setPackage(app.packageName) },
+        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+      )
+
     val builder =
       NotificationCompat.Builder(app, CHANNEL_ID)
         .setSmallIcon(R.drawable.ic_notification_water)
@@ -106,6 +117,7 @@ object WaterPersistentNotification {
         .setProgress(m.goalForBar, m.progressValue, false)
         .setStyle(style)
         .setContentIntent(contentPi)
+        .setDeleteIntent(deletePi)
         .setOngoing(true)
         .setOnlyAlertOnce(true)
         .setPriority(NotificationCompat.PRIORITY_LOW)

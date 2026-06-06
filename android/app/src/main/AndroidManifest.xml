@@ -86,6 +86,7 @@
         <action android:name="com.alperengozum.water.action.WIDGET_ADD_PRESET_1" />
         <action android:name="com.alperengozum.water.action.WIDGET_ADD_PRESET_2" />
         <action android:name="com.alperengozum.water.action.WIDGET_ANALYZE" />
+        <action android:name="com.alperengozum.water.action.NOTIF_DISMISSED" />
       </intent-filter>
     </receiver>
 

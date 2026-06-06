@@ -19,6 +19,10 @@ class WaterWidgetReceiver : BroadcastReceiver() {
       ACTION_ANALYZE -> {
         // No-op: keep stats on widget without launching the app.
       }
+      WaterPersistentNotification.ACTION_NOTIFICATION_DELETED -> {
+        WaterPersistentNotification.refresh(app)
+        return
+      }
       else -> return
     }
     WaterWidgetUpdater.refreshAllWidgets(app)
