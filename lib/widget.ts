@@ -1,7 +1,7 @@
 import { NativeModules, PermissionsAndroid, Platform } from "react-native";
 import { addDays, getDayKey, startOfDay } from "@/lib/date";
 import { computeStreak } from "@/lib/streak";
-import { useWaterStore, waitForWaterStoreHydration, type WaterLog } from "@/store/use-water-store";
+import { useWaterStore, waitForWaterStoreHydration } from "@/store/use-water-store";
 import type { Language } from "@/lib/i18n";
 
 type WaterWidgetPayload = {
@@ -30,31 +30,13 @@ const moduleRef = NativeModules.WaterWidget as WaterWidgetNativeModule | undefin
 
 let flushChain: Promise<void> | null = null;
 
-function todayMlFromLogs(logs: WaterLog[], dayKey: string): number {
-  return logs
-    .filter((log) => getDayKey(new Date(log.timestamp)) === dayKey)
-    .reduce((sum, log) => sum + log.amountMl, 0);
-}
-
-function weeklyPaceFromLogs(logs: WaterLog[]): number {
-  const start = startOfDay(addDays(new Date(), -6));
-  const totals = Array.from({ length: 7 }, (_, index) => {
-    const day = addDays(start, index);
-    const key = getDayKey(day);
-    return logs
-      .filter((log) => getDayKey(new Date(log.timestamp)) === key)
-      .reduce((sum, log) => sum + log.amountMl, 0);
-  });
-  return totals.reduce((s, v) => s + v, 0) / totals.length;
-}
-
-function weeklyDayTotalsFromLogs(logs: WaterLog[]): Record<string, number> {
+function weeklyDayTotalsFromCache(dailyTotals: Record<string, number>): Record<string, number> {
   const start = startOfDay(addDays(new Date(), -6));
   const out: Record<string, number> = {};
   for (let i = 0; i < 7; i++) {
     const day = addDays(start, i);
     const key = getDayKey(day);
-    out[key] = todayMlFromLogs(logs, key);
+    out[key] = dailyTotals[key] ?? 0;
   }
   return out;
 }
@@ -130,12 +112,12 @@ export function syncAndroidWaterWidgetFromStore(): void {
   if (process.env.EXPO_OS !== "android") {
     return;
   }
-  const { logs, goalMl, glassMl, glassIcon, presets, language } = useWaterStore.getState();
+  const { dailyTotals, goalMl, glassMl, glassIcon, presets, language } = useWaterStore.getState();
   const dayKey = getDayKey(new Date());
-  const todayMl = todayMlFromLogs(logs, dayKey);
-  const weeklyPaceMl = weeklyPaceFromLogs(logs);
-  const weeklyDayTotals = weeklyDayTotalsFromLogs(logs);
-  const streakDays = computeStreak(logs, goalMl);
+  const todayMl = dailyTotals[dayKey] ?? 0;
+  const weeklyDayTotals = weeklyDayTotalsFromCache(dailyTotals);
+  const weeklyPaceMl = Object.values(weeklyDayTotals).reduce((s, v) => s + v, 0) / 7;
+  const streakDays = computeStreak(dailyTotals, goalMl);
   updateWaterWidget(todayMl, goalMl, glassMl, weeklyPaceMl, weeklyDayTotals, dayKey, glassIcon, presets, streakDays, language);
 }
 

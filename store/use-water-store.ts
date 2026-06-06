@@ -3,6 +3,7 @@ import { create } from "zustand";
 import type { StateCreator } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import type { Language } from "@/lib/i18n";
+import { getDayKey } from "@/lib/date";
 
 export type WaterLog = {
   id: string;
@@ -20,6 +21,7 @@ type WaterState = {
   goalMl: number;
   glassMl: number;
   logs: WaterLog[];
+  dailyTotals: Record<string, number>;
   persistentNotificationEnabled: boolean;
   glassIcon?: string;
   presets: QuickPreset[];
@@ -57,10 +59,20 @@ const defaultPresets: QuickPreset[] = [
   { amountMl: 500 },
 ];
 
+function buildDailyTotals(logs: WaterLog[]): Record<string, number> {
+  const totals: Record<string, number> = {};
+  for (const log of logs) {
+    const key = getDayKey(new Date(log.timestamp));
+    totals[key] = (totals[key] ?? 0) + log.amountMl;
+  }
+  return totals;
+}
+
 const creator: StateCreator<WaterState> = (set, get) => ({
   goalMl: defaultGoalMl,
   glassMl: defaultGlassMl,
   logs: [],
+  dailyTotals: {},
   persistentNotificationEnabled: false,
   glassIcon: "water-outline",
   presets: defaultPresets,
@@ -79,7 +91,13 @@ const creator: StateCreator<WaterState> = (set, get) => ({
       timestamp: new Date().toISOString(),
       source: "glass",
     };
-    set((state) => ({ logs: [log, ...state.logs] }));
+    set((state) => {
+      const key = getDayKey(new Date(log.timestamp));
+      return {
+        logs: [log, ...state.logs],
+        dailyTotals: { ...state.dailyTotals, [key]: (state.dailyTotals[key] ?? 0) + glassMl },
+      };
+    });
   },
   addCustom: (amountMl: number) => {
     const log: WaterLog = {
@@ -88,10 +106,24 @@ const creator: StateCreator<WaterState> = (set, get) => ({
       timestamp: new Date().toISOString(),
       source: "quick",
     };
-    set((state) => ({ logs: [log, ...state.logs] }));
+    set((state) => {
+      const key = getDayKey(new Date(log.timestamp));
+      return {
+        logs: [log, ...state.logs],
+        dailyTotals: { ...state.dailyTotals, [key]: (state.dailyTotals[key] ?? 0) + amountMl },
+      };
+    });
   },
   removeLog: (id: string) => {
-    set((state) => ({ logs: state.logs.filter((log) => log.id !== id) }));
+    set((state) => {
+      const removed = state.logs.find((l) => l.id === id);
+      if (!removed) return {};
+      const key = getDayKey(new Date(removed.timestamp));
+      return {
+        logs: state.logs.filter((log) => log.id !== id),
+        dailyTotals: { ...state.dailyTotals, [key]: Math.max(0, (state.dailyTotals[key] ?? 0) - removed.amountMl) },
+      };
+    });
   },
   restoreLog: (log: WaterLog) => {
     set((state) => {
@@ -99,7 +131,11 @@ const creator: StateCreator<WaterState> = (set, get) => ({
       const idx = state.logs.findIndex((l) => l.timestamp < log.timestamp);
       const next = [...state.logs];
       next.splice(idx === -1 ? next.length : idx, 0, log);
-      return { logs: next };
+      const key = getDayKey(new Date(log.timestamp));
+      return {
+        logs: next,
+        dailyTotals: { ...state.dailyTotals, [key]: (state.dailyTotals[key] ?? 0) + log.amountMl },
+      };
     });
   },
   setGoalGlasses: (glasses: number) => {
@@ -145,7 +181,13 @@ export const useWaterStore = create<WaterState>()(
       streakAlertEnabled: state.streakAlertEnabled,
       language: state.language,
       hasSeenOnboarding: state.hasSeenOnboarding,
+      // dailyTotals intentionally excluded — rebuilt from logs on hydration
     }),
+    onRehydrateStorage: () => (state) => {
+      if (state) {
+        state.dailyTotals = buildDailyTotals(state.logs);
+      }
+    },
   }),
 );
 

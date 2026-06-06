@@ -13,12 +13,12 @@ export function WeeklyChart({ data, goalMl }: WeeklyChartProps) {
   const { t } = useTranslation();
   const { width } = useWindowDimensions();
 
-  const chartData = data.map((item) => ({
+  const chartData = React.useMemo(() => data.map((item) => ({
     value: item.value,
     label: item.label,
     frontColor: item.value >= goalMl ? "#FBBF24" : item.value > 0 ? "#22D3EE" : "#E2E8F0",
     labelTextStyle: { color: "#94A3B8", fontSize: 10 },
-  }));
+  })), [data, goalMl]);
 
   const maxValue = Math.max(goalMl * 1.1, ...data.map((d) => d.value), 100);
   // SectionCard has 16px padding each side; home screen 20px horizontal + 20px = 72 total offset

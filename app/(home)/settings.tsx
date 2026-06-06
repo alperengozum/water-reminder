@@ -109,12 +109,10 @@ export default function SettingsScreen() {
   React.useEffect(() => {
     if (!reminderEnabled) return;
     const key = getDayKey(new Date());
-    const { logs, goalMl: gMl, glassMl: glMl } = useWaterStore.getState();
+    const { logs, dailyTotals, goalMl: gMl, glassMl: glMl } = useWaterStore.getState();
     const lastDrink = logs.find((l) => getDayKey(new Date(l.timestamp)) === key);
-    const todayMl = logs
-      .filter((l) => getDayKey(new Date(l.timestamp)) === key)
-      .reduce((sum, l) => sum + l.amountMl, 0);
-    const streak = computeStreak(logs, gMl);
+    const todayMl = dailyTotals[key] ?? 0;
+    const streak = computeStreak(dailyTotals, gMl);
     const remainingGlasses = Math.max(0, Math.ceil((gMl - todayMl) / glMl));
     void scheduleWaterReminders(
       reminderIntervalHours,
@@ -157,11 +155,9 @@ export default function SettingsScreen() {
       setNotifPermissionGranted(true);
       setReminderEnabled(true);
       const key = getDayKey(new Date());
-      const { logs, goalMl: gMl, glassMl: glMl } = useWaterStore.getState();
-      const todayMl = logs
-        .filter((l) => getDayKey(new Date(l.timestamp)) === key)
-        .reduce((sum, l) => sum + l.amountMl, 0);
-      const streak = computeStreak(logs, gMl);
+      const { dailyTotals, goalMl: gMl, glassMl: glMl } = useWaterStore.getState();
+      const todayMl = dailyTotals[key] ?? 0;
+      const streak = computeStreak(dailyTotals, gMl);
       const remainingGlasses = Math.max(0, Math.ceil((gMl - todayMl) / glMl));
       await scheduleWaterReminders(reminderIntervalHours, reminderStartHour, reminderEndHour, undefined, streakAlertEnabled ? { streak, remainingGlasses } : undefined);
     },
@@ -193,11 +189,9 @@ export default function SettingsScreen() {
       // When reminders are on, the settings-change effect re-runs scheduleWaterReminders which includes it.
       if (!reminderEnabled) {
         const key = getDayKey(new Date());
-        const { logs, goalMl: gMl, glassMl: glMl } = useWaterStore.getState();
-        const todayMl = logs
-          .filter((l) => getDayKey(new Date(l.timestamp)) === key)
-          .reduce((sum, l) => sum + l.amountMl, 0);
-        const streak = computeStreak(logs, gMl);
+        const { dailyTotals, goalMl: gMl, glassMl: glMl } = useWaterStore.getState();
+        const todayMl = dailyTotals[key] ?? 0;
+        const streak = computeStreak(dailyTotals, gMl);
         const remainingGlasses = Math.max(0, Math.ceil((gMl - todayMl) / glMl));
         await scheduleStreakAtRiskAlert(streak, remainingGlasses, reminderEndHour, reminderStartHour);
       }

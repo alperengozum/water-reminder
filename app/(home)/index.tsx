@@ -22,6 +22,7 @@ import { useTranslation } from "@/lib/i18n";
 
 export default function HomeScreen() {
   const logs = useWaterStore((state) => state.logs);
+  const dailyTotals = useWaterStore((state) => state.dailyTotals);
   const goalMl = useWaterStore((state) => state.goalMl);
   const glassMl = useWaterStore((state) => state.glassMl);
   const addGlass = useWaterStore((state) => state.addGlass);
@@ -42,6 +43,7 @@ export default function HomeScreen() {
 
   const [undoEntry, setUndoEntry] = React.useState<{ id: string; label: string } | null>(null);
   const undoTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const widgetSyncTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const showUndo = React.useCallback((id: string, label: string) => {
     if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
@@ -56,11 +58,7 @@ export default function HomeScreen() {
   }, []);
 
   const todayKey = getDayKey(new Date());
-  const todayMl = React.useMemo(() => {
-    return logs
-      .filter((log) => getDayKey(new Date(log.timestamp)) === todayKey)
-      .reduce((sum, log) => sum + log.amountMl, 0);
-  }, [logs, todayKey]);
+  const todayMl = dailyTotals[todayKey] ?? 0;
 
   const todayGlasses = todayMl / glassMl;
   const isComplete = todayMl >= goalMl && goalMl > 0;
@@ -86,7 +84,7 @@ export default function HomeScreen() {
     return Math.ceil(reminderEndHour - hour);
   }, [reminderEndHour]);
 
-  const streak = React.useMemo(() => computeStreak(logs, goalMl), [logs, goalMl]);
+  const streak = React.useMemo(() => computeStreak(dailyTotals, goalMl), [dailyTotals, goalMl]);
 
   const summary = React.useMemo(() => {
     const rounded = Math.round(todayGlasses * 10) / 10;
@@ -128,10 +126,10 @@ export default function HomeScreen() {
     const now = new Date();
     const nowHour = now.getHours() + now.getMinutes() / 60;
     if (nowHour >= reminderEndHour) return null;
-    const todayLogs = logs.filter((l) => getDayKey(new Date(l.timestamp)) === todayKey);
+    const lastTodayLog = logs.find((l) => getDayKey(new Date(l.timestamp)) === todayKey);
     let nextMs: number;
-    if (todayLogs.length > 0) {
-      nextMs = new Date(todayLogs[0].timestamp).getTime() + reminderIntervalHours * 3600_000;
+    if (lastTodayLog) {
+      nextMs = new Date(lastTodayLog.timestamp).getTime() + reminderIntervalHours * 3600_000;
     } else {
       const windowStart = new Date(now);
       windowStart.setHours(reminderStartHour, 0, 0, 0);
@@ -162,15 +160,12 @@ export default function HomeScreen() {
     return Array.from({ length: 7 }, (_, index) => {
       const day = addDays(start, index);
       const dayKey = getDayKey(day);
-      const total = logs
-        .filter((log) => getDayKey(new Date(log.timestamp)) === dayKey)
-        .reduce((sum, log) => sum + log.amountMl, 0);
       return {
         label: getShortWeekday(day, language),
-        value: total,
+        value: dailyTotals[dayKey] ?? 0,
       };
     });
-  }, [logs, language]);
+  }, [dailyTotals, language]);
 
   const weeklyPaceMl = React.useMemo(
     () => weeklyData.reduce((sum, item) => sum + item.value, 0) / weeklyData.length,
@@ -207,14 +202,12 @@ export default function HomeScreen() {
       const s = useWaterStore.getState();
       if (!s.reminderEnabled) return;
       const key = getDayKey(new Date());
-      const ml = s.logs
-        .filter((l) => getDayKey(new Date(l.timestamp)) === key)
-        .reduce((sum, l) => sum + l.amountMl, 0);
+      const ml = s.dailyTotals[key] ?? 0;
       if (ml >= s.goalMl) {
         void cancelWaterReminders();
       } else {
         const lastDrink = s.logs.find((l) => getDayKey(new Date(l.timestamp)) === key);
-        const streakVal = computeStreak(s.logs, s.goalMl);
+        const streakVal = computeStreak(s.dailyTotals, s.goalMl);
         const remainingGlasses = Math.max(0, Math.ceil((s.goalMl - ml) / s.glassMl));
         void scheduleWaterReminders(
           s.reminderIntervalHours,
@@ -293,14 +286,18 @@ export default function HomeScreen() {
     }
     let cancelled = false;
     void flushWidgetPendingAdds().then(() => {
-      if (!cancelled) {
-        syncAndroidWaterWidgetFromStore();
-      }
+      if (cancelled) return;
+      if (widgetSyncTimerRef.current) clearTimeout(widgetSyncTimerRef.current);
+      widgetSyncTimerRef.current = setTimeout(syncAndroidWaterWidgetFromStore, 150);
     });
     return () => {
       cancelled = true;
+      if (widgetSyncTimerRef.current) {
+        clearTimeout(widgetSyncTimerRef.current);
+        widgetSyncTimerRef.current = null;
+      }
     };
-  }, [todayMl, goalMl, glassMl, weeklyPaceMl, logs]);
+  }, [todayMl, goalMl, glassMl, weeklyPaceMl, dailyTotals]);
 
   // Icon swap via setComponentEnabledSetting kills the app when called in the foreground.
   // Only apply it when the app goes to background — that's when the launcher reads the icon anyway.
@@ -308,10 +305,9 @@ export default function HomeScreen() {
     if (Platform.OS !== "android") return;
     const sub = AppState.addEventListener("change", (state) => {
       if (state === "background") {
-        const { logs: l, goalMl: g } = useWaterStore.getState();
+        const { dailyTotals: dt, goalMl: g } = useWaterStore.getState();
         const dk = getDayKey(new Date());
-        const ml = l.filter((log) => getDayKey(new Date(log.timestamp)) === dk).reduce((s, log) => s + log.amountMl, 0);
-        setAndroidAppIconComplete(ml >= g && g > 0);
+        setAndroidAppIconComplete((dt[dk] ?? 0) >= g && g > 0);
       }
     });
     return () => sub.remove();
