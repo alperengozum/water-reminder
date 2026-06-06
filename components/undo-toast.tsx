@@ -1,5 +1,6 @@
 import React from "react";
 import { Pressable, Text, View } from "react-native";
+import { useTranslation } from "@/lib/i18n";
 
 type UndoToastProps = {
   label: string;
@@ -8,6 +9,7 @@ type UndoToastProps = {
 };
 
 export function UndoToast({ label, onUndo, isComplete }: UndoToastProps) {
+  const { t } = useTranslation();
   const bg = isComplete ? "#78350F" : "#0F172A";
   const shadow = isComplete
     ? "0 8px 20px rgba(120, 53, 15, 0.32)"
@@ -49,7 +51,7 @@ export function UndoToast({ label, onUndo, isComplete }: UndoToastProps) {
           backgroundColor: pressed ? btnBgPressed : btnBg,
         })}
       >
-        <Text style={{ fontSize: 13, fontWeight: "700", color: btnText }}>Undo</Text>
+        <Text style={{ fontSize: 13, fontWeight: "700", color: btnText }}>{t.undo}</Text>
       </Pressable>
     </View>
   );

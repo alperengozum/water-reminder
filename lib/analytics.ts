@@ -43,10 +43,13 @@ export function computeAllTimeBestStreak(dailyTotals: Map<string, number>, goalM
 export function computeAvgLast30Days(dailyTotals: Map<string, number>): number {
   const today = new Date();
   let sum = 0;
+  let daysWithData = 0;
   for (let i = 0; i < 30; i++) {
-    sum += dailyTotals.get(getDayKey(addDays(today, -i))) ?? 0;
+    const ml = dailyTotals.get(getDayKey(addDays(today, -i))) ?? 0;
+    if (ml > 0) daysWithData++;
+    sum += ml;
   }
-  return sum / 30;
+  return daysWithData === 0 ? 0 : sum / daysWithData;
 }
 
 export function computeGoalDaysLast30(dailyTotals: Map<string, number>, goalMl: number): number {

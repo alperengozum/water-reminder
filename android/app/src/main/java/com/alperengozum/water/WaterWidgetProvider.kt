@@ -11,10 +11,10 @@ class WaterWidgetProvider : AppWidgetProvider() {
     appWidgetManager: AppWidgetManager,
     appWidgetIds: IntArray,
   ) {
-    val appContext = context.applicationContext
-    val snapshot = WaterWidgetStorage.read(appContext)
+    val lctx = WaterWidgetUpdater.localizedContextFromStorage(context.applicationContext)
+    val snapshot = WaterWidgetStorage.read(lctx)
     for (id in appWidgetIds) {
-      val views = WaterWidgetUpdater.buildRemoteViews(appContext, snapshot, id)
+      val views = WaterWidgetUpdater.buildRemoteViews(lctx, snapshot, id)
       appWidgetManager.updateAppWidget(id, views)
     }
   }
@@ -25,9 +25,9 @@ class WaterWidgetProvider : AppWidgetProvider() {
     appWidgetId: Int,
     newOptions: Bundle?,
   ) {
-    val appContext = context.applicationContext
-    val snapshot = WaterWidgetStorage.read(appContext)
-    val views = WaterWidgetUpdater.buildRemoteViews(appContext, snapshot, appWidgetId)
+    val lctx = WaterWidgetUpdater.localizedContextFromStorage(context.applicationContext)
+    val snapshot = WaterWidgetStorage.read(lctx)
+    val views = WaterWidgetUpdater.buildRemoteViews(lctx, snapshot, appWidgetId)
     appWidgetManager.updateAppWidget(appWidgetId, views)
   }
 }

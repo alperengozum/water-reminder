@@ -5,6 +5,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { BarChart } from "react-native-gifted-charts";
 import { LogList } from "@/components/log-list";
 import { SectionCard } from "@/components/section-card";
+import { UndoToast } from "@/components/undo-toast";
 import {
   computeAllTimeBestStreak,
   computeAvgLast30Days,
@@ -17,14 +18,9 @@ import {
 } from "@/lib/analytics";
 import { impactLight, impactMedium } from "@/lib/haptics";
 import { formatMl } from "@/lib/format";
+import { addDays, getDayKey } from "@/lib/date";
 import { useWaterStore } from "@/store/use-water-store";
-
-const DAY_HEADERS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
-
-const MONTH_NAMES = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December",
-];
+import { useTranslation } from "@/lib/i18n";
 
 function dayCellBg(cell: CalendarCell & { type: "day" }): string {
   if (cell.isFuture || cell.ml === 0) return "#E2E8F0";
@@ -108,14 +104,38 @@ export default function HistoryScreen() {
   const logs = useWaterStore((state) => state.logs);
   const goalMl = useWaterStore((state) => state.goalMl);
   const removeLog = useWaterStore((state) => state.removeLog);
+  const restoreLog = useWaterStore((state) => state.restoreLog);
+  const { t } = useTranslation();
+
+  const [undoEntry, setUndoEntry] = React.useState<{ log: import("@/store/use-water-store").WaterLog } | null>(null);
+  const undoTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleRemoveLog = React.useCallback(
     (id: string) => {
+      const log = useWaterStore.getState().logs.find((l) => l.id === id);
+      if (!log) return;
       impactMedium();
       removeLog(id);
+      if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+      setUndoEntry({ log });
+      undoTimerRef.current = setTimeout(() => setUndoEntry(null), 4000);
     },
     [removeLog],
   );
+
+  const handleUndo = React.useCallback(() => {
+    if (!undoEntry) return;
+    restoreLog(undoEntry.log);
+    impactMedium();
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+    setUndoEntry(null);
+  }, [undoEntry, restoreLog]);
+
+  React.useEffect(() => {
+    return () => {
+      if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+    };
+  }, []);
 
   const today = new Date();
   const [viewYear, setViewYear] = React.useState(today.getFullYear());
@@ -181,6 +201,20 @@ export default function HistoryScreen() {
     [last30, goalMl],
   );
 
+  // Group all logs by local day, sorted newest-day-first
+  const logsByDay = React.useMemo(() => {
+    const map = new Map<string, typeof logs>();
+    for (const log of logs) {
+      const key = getDayKey(new Date(log.timestamp));
+      const arr = map.get(key) ?? [];
+      arr.push(log);
+      map.set(key, arr);
+    }
+    return Array.from(map.entries())
+      .sort(([a], [b]) => (a > b ? -1 : 1))
+      .map(([dayKey, dayLogs]) => ({ dayKey, dayLogs }));
+  }, [logs]);
+
   const isCurrentMonth =
     viewYear === today.getFullYear() && viewMonth === today.getMonth();
 
@@ -224,6 +258,7 @@ export default function HistoryScreen() {
   const chartSpacing = Math.max(1, Math.floor(barPlusGap * 0.35));
 
   return (
+    <View style={{ flex: 1 }}>
     <ScrollView
       style={{ flex: 1, backgroundColor: "#F8FAFC" }}
       contentContainerStyle={{
@@ -259,7 +294,7 @@ export default function HistoryScreen() {
           </Pressable>
 
           <Text selectable style={{ fontSize: 17, fontWeight: "800", color: "#0F172A" }}>
-            {MONTH_NAMES[viewMonth]} {viewYear}
+            {t.months[viewMonth]} {viewYear}
           </Text>
 
           <Pressable
@@ -286,7 +321,7 @@ export default function HistoryScreen() {
         </View>
 
         <View style={{ flexDirection: "row", gap: cellGap }}>
-          {DAY_HEADERS.map((d) => (
+          {t.dayHeaders.map((d) => (
             <View key={d} style={{ width: cellSize, alignItems: "center" }}>
               <Text style={{ fontSize: 11, fontWeight: "700", color: "#94A3B8" }}>{d}</Text>
             </View>
@@ -341,25 +376,25 @@ export default function HistoryScreen() {
             alignItems: "center",
           }}
         >
-          <LegendItem color="#E2E8F0" label="None" />
-          <LegendItem color="#7DD3FC" label="Partial" />
-          <LegendItem color="#FBBF24" label="Goal" />
+          <LegendItem color="#E2E8F0" label={t.legendNone} />
+          <LegendItem color="#7DD3FC" label={t.legendPartial} />
+          <LegendItem color="#FBBF24" label={t.legendGoal} />
         </View>
       </SectionCard>
 
       <View style={{ flexDirection: "row", gap: 12 }}>
         <StatCard
-          label="Best streak"
+          label={t.bestStreak}
           value={`${bestStreak}`}
-          unit="days ever"
+          unit={t.daysEver}
           accent="#D97706"
           bg="#FFFBEB"
           labelBg="#FDE68A"
         />
         <StatCard
-          label="30-day avg"
+          label={t.avgLabel}
           value={`${Math.round(avg30)}`}
-          unit="ml per day"
+          unit={t.mlPerDay}
           accent="#0891B2"
           bg="#ECFEFF"
           labelBg="#A5F3FC"
@@ -368,17 +403,17 @@ export default function HistoryScreen() {
 
       <View style={{ flexDirection: "row", gap: 12 }}>
         <StatCard
-          label="Goal days"
+          label={t.goalDays}
           value={`${goalDays30}`}
-          unit="of last 30"
+          unit={t.ofLast30}
           accent="#0891B2"
           bg="#F0F9FF"
           labelBg="#BAE6FD"
         />
         <StatCard
-          label="Best day"
+          label={t.bestDay}
           value={`${Math.round(bestDay)}`}
-          unit="ml ever"
+          unit={t.mlEver}
           accent="#7C3AED"
           bg="#F5F3FF"
           labelBg="#DDD6FE"
@@ -387,15 +422,15 @@ export default function HistoryScreen() {
 
       <SectionCard variant="soft">
         <Text selectable style={{ fontSize: 16, fontWeight: "800", color: "#0F172A" }}>
-          30-day trend
+          {t.trendTitle}
         </Text>
         <Text selectable style={{ fontSize: 13, color: "#64748B" }}>
-          Amber = goal hit · dashed line = {formatMl(goalMl)} target
+          {t.trendDesc(formatMl(goalMl))}
         </Text>
         {logs.length === 0 ? (
           <View style={{ paddingVertical: 32, alignItems: "center" }}>
             <Text style={{ fontSize: 14, color: "#94A3B8" }}>
-              No data yet — start logging!
+              {t.noDataYet}
             </Text>
           </View>
         ) : (
@@ -418,7 +453,7 @@ export default function HistoryScreen() {
               color: "#0891B2",
               width: 1,
               type: "dashed",
-              labelText: "Goal",
+              labelText: t.goalChartLabel,
               labelTextStyle: { color: "#0891B2", fontSize: 10 },
             }}
           />
@@ -427,10 +462,62 @@ export default function HistoryScreen() {
 
       <SectionCard variant="soft">
         <Text selectable style={{ fontSize: 16, fontWeight: "800", color: "#0F172A" }}>
-          Recent logs
+          {t.recentLogs}
         </Text>
-        <LogList logs={logs} onRemove={handleRemoveLog} />
+        {logsByDay.length === 0 ? (
+          <Text selectable style={{ fontSize: 13, color: "#94A3B8" }}>
+            {t.noLogs}
+          </Text>
+        ) : (
+          logsByDay.map(({ dayKey, dayLogs }) => {
+            const todayKey = getDayKey(today);
+            const yesterdayKey = getDayKey(addDays(today, -1));
+            const dayLabel =
+              dayKey === todayKey
+                ? t.todayLabel
+                : dayKey === yesterdayKey
+                  ? t.yesterdayLabel
+                  : new Date(dayKey + "T12:00:00").toLocaleDateString(undefined, {
+                      weekday: "short",
+                      month: "short",
+                      day: "numeric",
+                    });
+            return (
+              <View key={dayKey} style={{ gap: 8 }}>
+                <Text
+                  selectable
+                  style={{
+                    fontSize: 12,
+                    fontWeight: "700",
+                    color: "#94A3B8",
+                    textTransform: "uppercase",
+                    letterSpacing: 0.5,
+                  }}
+                >
+                  {dayLabel}
+                </Text>
+                <LogList logs={dayLogs} onRemove={handleRemoveLog} />
+              </View>
+            );
+          })
+        )}
       </SectionCard>
     </ScrollView>
+    {undoEntry && (
+      <View
+        style={{
+          position: "absolute",
+          bottom: Math.max(insets.bottom, 12) + 16,
+          left: horizontalPad,
+          right: horizontalPad,
+        }}
+      >
+        <UndoToast
+          label={t.removedAmount(formatMl(undoEntry.log.amountMl))}
+          onUndo={handleUndo}
+        />
+      </View>
+    )}
+    </View>
   );
 }

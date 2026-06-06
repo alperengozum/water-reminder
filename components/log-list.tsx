@@ -2,6 +2,7 @@ import React from "react";
 import { LayoutAnimation, Pressable, Text, View } from "react-native";
 import { WaterLog } from "@/store/use-water-store";
 import { formatMl } from "@/lib/format";
+import { useTranslation } from "@/lib/i18n";
 
 type LogListProps = {
   logs: WaterLog[];
@@ -11,13 +12,14 @@ type LogListProps = {
 };
 
 export function LogList({ logs, onRemove, maxItems }: LogListProps) {
+  const { t } = useTranslation();
   const displayed =
     maxItems !== undefined ? logs.slice(0, Math.max(0, maxItems)) : logs;
 
   if (logs.length === 0) {
     return (
       <Text selectable style={{ fontSize: 13, color: "#94A3B8" }}>
-        No logs yet. Add your first glass.
+        {t.noLogs}
       </Text>
     );
   }
@@ -74,7 +76,7 @@ export function LogList({ logs, onRemove, maxItems }: LogListProps) {
                   }}
                 >
                   <Text selectable style={{ fontSize: 11, fontWeight: "700", color: chipText }}>
-                    {isQuick ? "Quick" : "Glass"} · {time}
+                    {isQuick ? t.quickLabel : t.glassLogLabel} · {time}
                   </Text>
                 </View>
               </View>
@@ -98,7 +100,7 @@ export function LogList({ logs, onRemove, maxItems }: LogListProps) {
             >
               {({ pressed }) => (
                 <Text selectable style={{ fontSize: 12, color: pressed ? "#9F1239" : "#BE123C", fontWeight: "700" }}>
-                  Remove
+                  {t.removeLabel}
                 </Text>
               )}
             </Pressable>

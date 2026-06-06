@@ -2,6 +2,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
 import type { StateCreator } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
+import type { Language } from "@/lib/i18n";
 
 export type WaterLog = {
   id: string;
@@ -26,9 +27,11 @@ type WaterState = {
   reminderIntervalHours: number;
   reminderStartHour: number;
   reminderEndHour: number;
+  language: Language;
   addGlass: () => void;
   addCustom: (amountMl: number) => void;
   removeLog: (id: string) => void;
+  restoreLog: (log: WaterLog) => void;
   setGoalGlasses: (glasses: number) => void;
   setGlassMl: (ml: number) => void;
   setPersistentNotificationEnabled: (enabled: boolean) => void;
@@ -40,6 +43,9 @@ type WaterState = {
   setReminderStartHour: (hour: number) => void;
   setReminderEndHour: (hour: number) => void;
   setStreakAlertEnabled: (enabled: boolean) => void;
+  setLanguage: (lang: Language) => void;
+  hasSeenOnboarding: boolean;
+  setHasSeenOnboarding: (seen: boolean) => void;
 };
 
 const defaultGlassMl = 250;
@@ -63,6 +69,8 @@ const creator: StateCreator<WaterState> = (set, get) => ({
   reminderStartHour: 8,
   reminderEndHour: 22,
   streakAlertEnabled: true,
+  language: "en",
+  hasSeenOnboarding: false,
   addGlass: () => {
     const { glassMl } = get();
     const log: WaterLog = {
@@ -85,6 +93,15 @@ const creator: StateCreator<WaterState> = (set, get) => ({
   removeLog: (id: string) => {
     set((state) => ({ logs: state.logs.filter((log) => log.id !== id) }));
   },
+  restoreLog: (log: WaterLog) => {
+    set((state) => {
+      // Insert in descending timestamp order
+      const idx = state.logs.findIndex((l) => l.timestamp < log.timestamp);
+      const next = [...state.logs];
+      next.splice(idx === -1 ? next.length : idx, 0, log);
+      return { logs: next };
+    });
+  },
   setGoalGlasses: (glasses: number) => {
     const { glassMl } = get();
     set({ goalMl: Math.max(glassMl, Math.round(glasses) * glassMl) });
@@ -106,6 +123,8 @@ const creator: StateCreator<WaterState> = (set, get) => ({
   setReminderStartHour: (hour) => set({ reminderStartHour: hour }),
   setReminderEndHour: (hour) => set({ reminderEndHour: hour }),
   setStreakAlertEnabled: (enabled) => set({ streakAlertEnabled: enabled }),
+  setLanguage: (lang) => set({ language: lang }),
+  setHasSeenOnboarding: (seen) => set({ hasSeenOnboarding: seen }),
 });
 
 export const useWaterStore = create<WaterState>()(
@@ -124,6 +143,8 @@ export const useWaterStore = create<WaterState>()(
       reminderStartHour: state.reminderStartHour,
       reminderEndHour: state.reminderEndHour,
       streakAlertEnabled: state.streakAlertEnabled,
+      language: state.language,
+      hasSeenOnboarding: state.hasSeenOnboarding,
     }),
   }),
 );

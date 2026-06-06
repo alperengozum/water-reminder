@@ -36,6 +36,10 @@ export default function WidgetDeepLinkScreen() {
           break;
         }
         case "analyze":
+          if (!ac.signal.aborted) {
+            router.replace("/history");
+          }
+          return;
         default:
           break;
       }

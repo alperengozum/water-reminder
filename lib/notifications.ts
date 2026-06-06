@@ -1,4 +1,6 @@
 import * as Notifications from "expo-notifications";
+import { getT } from "@/lib/i18n";
+import { useWaterStore } from "@/store/use-water-store";
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -14,9 +16,10 @@ export async function checkNotificationsPermission(): Promise<boolean> {
 }
 
 export async function requestNotificationsPermission(): Promise<boolean> {
+  const t = getT(useWaterStore.getState().language);
   if (process.env.EXPO_OS === "android") {
     await Notifications.setNotificationChannelAsync("water-reminders", {
-      name: "Water Reminders",
+      name: t.notifChannelName,
       importance: Notifications.AndroidImportance.DEFAULT,
     });
   }
@@ -56,6 +59,7 @@ export async function scheduleWaterReminders(
   await Notifications.cancelAllScheduledNotificationsAsync();
 
   const now = new Date();
+  const t = getT(useWaterStore.getState().language);
 
   for (let dayOffset = 0; dayOffset < SCHEDULE_DAYS; dayOffset++) {
     const dayStart = new Date(now);
@@ -68,7 +72,6 @@ export async function scheduleWaterReminders(
     if (dayOffset === 0 && lastDrinkAt) {
       const next = new Date(lastDrinkAt.getTime() + intervalHours * 60 * 60 * 1000);
       if (!isSameCalendarDay(next, now)) {
-        // Next slot crosses midnight — nothing left to schedule today
         firstHour = endHour;
         firstMinute = 0;
       } else {
@@ -109,10 +112,15 @@ export async function scheduleWaterReminders(
       fireDate.setHours(h, m, 0, 0);
 
       if (fireDate.getTime() > now.getTime()) {
+        // For today, bake remaining-glasses context into the body so it varies per slot
+        const remaining = dayOffset === 0 && streakAlert ? streakAlert.remainingGlasses : undefined;
+        const body = remaining !== undefined && remaining > 0
+          ? t.notifHydrationBodyContextual(remaining)
+          : t.notifHydrationBody;
         await Notifications.scheduleNotificationAsync({
           content: {
-            title: "Time to hydrate 💧",
-            body: "Drink a glass of water to stay on track.",
+            title: t.notifHydrationTitle,
+            body,
             sound: true,
           },
           trigger: {
@@ -146,11 +154,12 @@ async function _doScheduleStreakAlert(
   const alertDate = new Date(now);
   alertDate.setHours(alertHour, 0, 0, 0);
   if (alertDate.getTime() <= now.getTime()) return;
+  const t = getT(useWaterStore.getState().language);
   await Notifications.scheduleNotificationAsync({
     identifier: STREAK_ALERT_ID,
     content: {
-      title: `${streak}-day streak at risk 🔥`,
-      body: `${remainingGlasses} glass${remainingGlasses === 1 ? "" : "es"} left to protect it.`,
+      title: t.notifStreakTitle(streak),
+      body: t.notifStreakBody(remainingGlasses),
       sound: true,
     },
     trigger: {

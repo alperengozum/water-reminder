@@ -1,0 +1,61 @@
+<resources>
+  <string name="app_name">Su Hatırlatıcısı</string>
+  <string name="widget_water_name">Su</string>
+  <string name="widget_water_description">Bugünkü ilerleme, 7 günlük pace ve hızlı ekleme — ana ekranınızdan.</string>
+  <string name="widget_title">Hidrasyon</string>
+  <string name="widget_analyze_icon">◇</string>
+  <string name="widget_pct_badge">%1$d%%</string>
+  <string name="widget_primary_line">%1$d / %2$d ml · %3$d ml bardak</string>
+  <string name="widget_analyze_line">7 günlük ort. · %1$d ml</string>
+  <string name="widget_btn_glass">+%1$d ml</string>
+  <string name="widget_goal_reached">Hedefe ulaşıldı</string>
+  <string name="notif_channel_name">Su Hatırlatıcısı</string>
+  <string name="notif_channel_desc">Günlük ilerleme ve bildirimden hızlı ekleme</string>
+  <string name="notif_headline">Günlük hidrasyon</string>
+  <string name="notif_headline_complete">Günlük hedefe ulaşıldı</string>
+  <string name="notif_title">%1$d / %2$d ml</string>
+  <string name="notif_summary">%1$d%% · %2$d ml bardak</string>
+  <string name="notif_big_body_progress">Hedefe ulaşmak için yaklaşık %1$d ml kaldı.\nAşağıdaki aksiyonlarla bardak (%2$d ml) ekle.</string>
+  <string name="notif_big_body_complete">Aferin — hedefe ulaştın.\nAşağıdaki aksiyonlarla daha fazla ekleyebilirsin.</string>
+  <string name="notif_action_glass">+%1$d ml</string>
+  <!-- Widget picker preview (previewLayout only) -->
+  <string name="widget_preview_badge">65%</string>
+  <string name="widget_preview_primary">1.200 / 2.000 ml · 250 ml bardak</string>
+  <string name="widget_preview_analyze">7 günlük ort. · 1.850 ml</string>
+  <string name="widget_preview_btn_glass">+250 ml</string>
+  <string name="widget_preview_btn_preset_0">+330 ml</string>
+  <string name="widget_preview_btn_preset_1">+500 ml</string>
+  <string name="widget_preview_btn_preset_2">+750 ml</string>
+  <!-- Streak widget -->
+  <string name="widget_streak_name">Su Serisi</string>
+  <string name="widget_streak_description">Günlük serinize tek bakışta ulaşın.</string>
+  <string name="widget_streak_label">SERİ</string>
+  <string name="widget_streak_unit_single">gün</string>
+  <string name="widget_streak_unit_plural">gün</string>
+  <string name="widget_streak_none">Seri başlatmak için bugün hedefe ulaş.</string>
+  <string name="widget_streak_msg_start">Harika başlangıç — yarın geri gel.</string>
+  <string name="widget_streak_msg_going">%1$d gün güçlü. Devam et.</string>
+  <string name="widget_streak_msg_serious">Ciddi tutarlılık. Bozma.</string>
+  <string name="widget_streak_msg_unstoppable">Durdurulamazsın.</string>
+  <string name="widget_streak_today">Bugün %1$d / %2$d ml</string>
+  <!-- Streak widget picker preview -->
+  <string name="widget_streak_preview_count">5</string>
+  <string name="widget_streak_preview_pct">80%</string>
+  <string name="widget_streak_preview_message">Ciddi tutarlılık. Bozma.</string>
+  <string name="widget_streak_preview_today">Bugün 1.600 / 2.000 ml</string>
+  <string name="widget_streak_preview_btn">+250 ml</string>
+  <!-- Legacy strings -->
+  <string name="widget_water_line_primary">%1$d ml · Hedef %2$d ml</string>
+  <string name="widget_water_line_secondary">%1$d%% · %2$d ml bardak</string>
+  <!-- Compact launcher widget -->
+  <string name="widget_compact_name">Su (kompakt)</string>
+  <string name="widget_compact_description">Ana ekranınızda dairesel ilerleme ve tek dokunuşla kayıt.</string>
+  <string name="widget_compact_header_water">SU</string>
+  <string name="widget_compact_pct">%1$d%%</string>
+  <string name="widget_compact_btn_log">+ Kaydet</string>
+  <string name="widget_compact_btn_log_ml">+%1$d ml</string>
+  <string name="widget_compact_status_progress">%1$d ml kaldı</string>
+  <string name="widget_compact_status_goal">Hedefe ulaşıldı</string>
+  <string name="widget_compact_preview_pct">65%</string>
+  <string name="widget_compact_preview_status">700 ml kaldı</string>
+</resources>

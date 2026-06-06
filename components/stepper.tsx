@@ -5,11 +5,12 @@ import { PulseOnChange } from "@/components/pulse-on-change";
 type StepperProps = {
   label: string;
   value: string;
+  subtitle?: string;
   onIncrement: () => void;
   onDecrement: () => void;
 };
 
-export function Stepper({ label, value, onIncrement, onDecrement }: StepperProps) {
+export function Stepper({ label, value, subtitle, onIncrement, onDecrement }: StepperProps) {
   return (
     <View style={{ gap: 8 }}>
       <Text selectable style={{ fontSize: 13, color: "#64748B", fontWeight: "600" }}>
@@ -76,6 +77,11 @@ export function Stepper({ label, value, onIncrement, onDecrement }: StepperProps
           </Text>
         </Pressable>
       </View>
+      {subtitle ? (
+        <Text selectable style={{ fontSize: 12, color: "#94A3B8", fontWeight: "500" }}>
+          {subtitle}
+        </Text>
+      ) : null}
     </View>
   );
 }

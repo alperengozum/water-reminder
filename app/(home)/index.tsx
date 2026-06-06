@@ -8,7 +8,9 @@ import { PulseOnChange } from "@/components/pulse-on-change";
 import { SectionCard } from "@/components/section-card";
 import { ProgressWidget } from "@/components/progress-widget";
 import { StreakCard } from "@/components/streak-card";
+import { WeeklyChart } from "@/components/weekly-chart";
 import { UndoToast } from "@/components/undo-toast";
+import { OnboardingTooltip } from "@/components/onboarding-tooltip";
 import { addDays, getDayKey, getShortWeekday, startOfDay } from "@/lib/date";
 import { formatGlasses, formatMl } from "@/lib/format";
 import { computeStreak } from "@/lib/streak";
@@ -16,6 +18,7 @@ import { impactMedium, notifySuccess } from "@/lib/haptics";
 import { cancelStreakAtRiskAlert, cancelWaterReminders, scheduleStreakAtRiskAlert, scheduleWaterReminders } from "@/lib/notifications";
 import { flushWidgetPendingAdds, setAndroidAppIconComplete, syncAndroidWaterWidgetFromStore } from "@/lib/widget";
 import { useWaterStore, waitForWaterStoreHydration } from "@/store/use-water-store";
+import { useTranslation } from "@/lib/i18n";
 
 export default function HomeScreen() {
   const logs = useWaterStore((state) => state.logs);
@@ -31,7 +34,10 @@ export default function HomeScreen() {
   const reminderStartHour = useWaterStore((state) => state.reminderStartHour);
   const reminderEndHour = useWaterStore((state) => state.reminderEndHour);
   const streakAlertEnabled = useWaterStore((state) => state.streakAlertEnabled);
+  const hasSeenOnboarding = useWaterStore((state) => state.hasSeenOnboarding);
+  const setHasSeenOnboarding = useWaterStore((state) => state.setHasSeenOnboarding);
 
+  const { t, language } = useTranslation();
   const insets = useSafeAreaInsets();
 
   const [undoEntry, setUndoEntry] = React.useState<{ id: string; label: string } | null>(null);
@@ -80,30 +86,32 @@ export default function HomeScreen() {
     return Math.ceil(reminderEndHour - hour);
   }, [reminderEndHour]);
 
+  const streak = React.useMemo(() => computeStreak(logs, goalMl), [logs, goalMl]);
+
   const summary = React.useMemo(() => {
     const rounded = Math.round(todayGlasses * 10) / 10;
     const hour = new Date().getHours();
     if (rounded <= 0) {
       if (hour < 10) {
         return streak > 0
-          ? `Good morning — day ${streak + 1} starts now.`
-          : "Good morning — start your day with a glass.";
+          ? t.summaryMorningStreak(streak + 1)
+          : t.summaryMorningStart;
       }
-      return "Let's start with a calm sip.";
+      return t.summaryCalmSip;
     }
     if (pacingBehindGlasses >= 2) {
-      const suffix = hoursLeftInWindow != null ? `${hoursLeftInWindow}h left today` : "drink up";
-      return `${Math.round(pacingBehindGlasses)} glasses behind — ${suffix}.`;
+      const suffix = hoursLeftInWindow != null ? t.hLeftToday(hoursLeftInWindow) : t.drinkUp;
+      return t.summaryBehindMany(Math.round(pacingBehindGlasses), suffix);
     }
     if (pacingBehindGlasses >= 1) {
-      const suffix = hoursLeftInWindow != null ? `${hoursLeftInWindow}h left today` : "nearly there";
-      return `1 glass behind — ${suffix}.`;
+      const suffix = hoursLeftInWindow != null ? t.hLeftToday(hoursLeftInWindow) : t.nearlyThere;
+      return t.summaryBehind1(suffix);
     }
-    if (pacingBehindGlasses <= -1) return "Ahead of schedule. Keep it up.";
-    if (hour >= 20 && !isComplete) return "Last chance to hit your goal tonight.";
-    if (rounded === 1) return "1 glass in. On pace.";
-    return `${rounded} glasses in the tank.`;
-  }, [todayGlasses, pacingBehindGlasses, hoursLeftInWindow, streak, isComplete]);
+    if (pacingBehindGlasses <= -1) return t.summaryAhead;
+    if (hour >= 20 && !isComplete) return t.summaryLastChance;
+    if (rounded === 1) return t.summary1Glass;
+    return t.summaryGlasses(rounded);
+  }, [todayGlasses, pacingBehindGlasses, hoursLeftInWindow, streak, isComplete, t]);
 
   const remainingGlasses = Math.max(0, Math.ceil((goalMl - todayMl) / glassMl));
 
@@ -113,6 +121,31 @@ export default function HomeScreen() {
     if (remainingGlasses === 0 || hoursLeftInWindow === null) return null;
     return Math.round((hoursLeftInWindow * 60) / remainingGlasses);
   }, [remainingGlasses, hoursLeftInWindow]);
+
+  // "Next drink" hint — derived from last drink + interval, or window start if no drinks today
+  const nextDrinkHint = React.useMemo(() => {
+    if (isComplete) return null;
+    const now = new Date();
+    const nowHour = now.getHours() + now.getMinutes() / 60;
+    if (nowHour >= reminderEndHour) return null;
+    const todayLogs = logs.filter((l) => getDayKey(new Date(l.timestamp)) === todayKey);
+    let nextMs: number;
+    if (todayLogs.length > 0) {
+      nextMs = new Date(todayLogs[0].timestamp).getTime() + reminderIntervalHours * 3600_000;
+    } else {
+      const windowStart = new Date(now);
+      windowStart.setHours(reminderStartHour, 0, 0, 0);
+      nextMs = windowStart.getTime();
+    }
+    const next = new Date(nextMs);
+    if (next <= now) return "Drink now";
+    const h = next.getHours();
+    const m = next.getMinutes();
+    const period = h < 12 ? "AM" : "PM";
+    const displayH = h % 12 || 12;
+    const displayM = m === 0 ? "" : `:${String(m).padStart(2, "0")}`;
+    return `Next · ${displayH}${displayM} ${period}`;
+  }, [isComplete, logs, todayKey, reminderIntervalHours, reminderStartHour, reminderEndHour]);
 
   const pageBackground = isComplete ? "#FFFBEB" : "#F8FAFC";
   const heroBackground = isComplete ? "#FEF3C7" : "#ECFEFF";
@@ -133,32 +166,30 @@ export default function HomeScreen() {
         .filter((log) => getDayKey(new Date(log.timestamp)) === dayKey)
         .reduce((sum, log) => sum + log.amountMl, 0);
       return {
-        label: getShortWeekday(day),
+        label: getShortWeekday(day, language),
         value: total,
       };
     });
-  }, [logs]);
+  }, [logs, language]);
 
   const weeklyPaceMl = React.useMemo(
     () => weeklyData.reduce((sum, item) => sum + item.value, 0) / weeklyData.length,
     [weeklyData],
   );
 
-  const streak = React.useMemo(() => computeStreak(logs, goalMl), [logs, goalMl]);
-
   const handleAddGlass = React.useCallback(() => {
     addGlass();
     impactMedium();
     const id = useWaterStore.getState().logs[0]?.id;
-    if (id) showUndo(id, `Added ${glassMl} ml`);
-  }, [addGlass, glassMl, showUndo]);
+    if (id) showUndo(id, t.addedAmount(formatMl(glassMl)));
+  }, [addGlass, glassMl, showUndo, t]);
 
   const handleAddCustom = React.useCallback((amountMl: number) => {
     addCustom(amountMl);
     notifySuccess();
     const id = useWaterStore.getState().logs[0]?.id;
-    if (id) showUndo(id, `Added ${amountMl} ml`);
-  }, [addCustom, showUndo]);
+    if (id) showUndo(id, t.addedAmount(formatMl(amountMl)));
+  }, [addCustom, showUndo, t]);
 
   const handleUndo = React.useCallback(() => {
     if (!undoEntry) return;
@@ -349,14 +380,19 @@ export default function HomeScreen() {
           }}
         />
         <Text selectable style={{ fontSize: 12, fontWeight: "700", color: heroKicker }}>
-          Today
+          {t.today}
         </Text>
         <Text selectable style={{ fontSize: 28, fontWeight: "800", color: "#0F172A" }}>
-          Hydration check-in
+          {t.hydrationCheckIn}
         </Text>
         <Text selectable style={{ fontSize: 14, color: heroSummary }}>
           {summary}
         </Text>
+        {nextDrinkHint && (
+          <Text selectable style={{ fontSize: 12, color: heroKicker, fontWeight: "600" }}>
+            {nextDrinkHint}
+          </Text>
+        )}
         <View
           style={{
             alignSelf: "flex-start",
@@ -369,28 +405,28 @@ export default function HomeScreen() {
         >
           <PulseOnChange watch={todayMl}>
             <Text selectable style={{ fontSize: 12, fontWeight: "700", color: heroTagText }}>
-              {formatMl(todayMl)} so far · Goal {formatMl(goalMl)}
+              {t.soFarGoal(formatMl(todayMl), formatMl(goalMl))}
             </Text>
           </PulseOnChange>
         </View>
       </View>
 
-      <StreakCard streak={streak} isComplete={isComplete} />
+      <StreakCard streak={streak} isComplete={isComplete} remainingGlasses={remainingGlasses} />
 
       <View style={{ flexDirection: "row", gap: 12, flexShrink: 0 }}>
         <View style={{ flex: 1 }}>
           <MetricCard
-            label="So far"
+            label={t.soFarLabel}
             value={formatMl(todayMl)}
-            subtitle={`${formatGlasses(todayGlasses)} glasses`}
+            subtitle={t.glassesUnit(formatGlasses(todayGlasses))}
             tone={isComplete ? "warm" : "cool"}
           />
         </View>
         <View style={{ flex: 1 }}>
           <MetricCard
-            label="Left today"
-            value={isComplete ? "Done!" : `${remainingGlasses}`}
-            subtitle={isComplete ? "goal reached" : `${remainingGlasses === 1 ? "glass" : "glasses"} to go`}
+            label={t.leftTodayLabel}
+            value={isComplete ? t.doneLabel : `${remainingGlasses}`}
+            subtitle={isComplete ? t.goalReachedSubtitle : t.glassesToGoSubtitle(remainingGlasses)}
             tone={isComplete ? "warm" : "warm"}
             variant="outline"
           />
@@ -414,15 +450,15 @@ export default function HomeScreen() {
             flexShrink: 0,
             opacity: pressed ? 0.8 : 1,
           })}
-          accessibilityLabel="Log a glass to catch up"
+          accessibilityLabel={t.logGlassToCatchUp}
           accessibilityRole="button"
         >
           <View style={{ flex: 1, gap: 3 }}>
             <Text selectable style={{ fontSize: 13, fontWeight: "700", color: "#DC2626" }}>
-              Sprint time
+              {t.sprintTime}
             </Text>
             <Text selectable style={{ fontSize: 12, color: "#B91C1C" }}>
-              {Math.round(pacingBehindGlasses)} glasses behind · {hoursLeftInWindow}h left — drink up
+              {t.sprintBehindLine(Math.round(pacingBehindGlasses), hoursLeftInWindow ?? 0)}
             </Text>
           </View>
           <View
@@ -434,7 +470,7 @@ export default function HomeScreen() {
               paddingVertical: 6,
             }}
           >
-            <Text style={{ fontSize: 12, fontWeight: "700", color: "#7F1D1D" }}>Log glass</Text>
+            <Text style={{ fontSize: 12, fontWeight: "700", color: "#7F1D1D" }}>{t.logGlass}</Text>
           </View>
         </Pressable>
       )}
@@ -453,23 +489,23 @@ export default function HomeScreen() {
           }}
         >
           <Text selectable style={{ fontSize: 13, fontWeight: "700", color: "#C2410C" }}>
-            {Math.round(pacingBehindGlasses) === 1 ? "1 glass behind" : `${Math.round(pacingBehindGlasses)} glasses behind`}
-            {hoursLeftInWindow !== null ? ` · ${hoursLeftInWindow}h left` : ""}
+            {t.glassesBehindCount(Math.round(pacingBehindGlasses))}
+            {hoursLeftInWindow !== null ? t.hLeftLabel(hoursLeftInWindow) : ""}
           </Text>
           {catchUpIntervalMinutes !== null && (
             <Text selectable style={{ fontSize: 12, color: "#EA580C" }}>
-              {"Aim for 1 glass every "}
-              {catchUpIntervalMinutes < 60
-                ? `${catchUpIntervalMinutes}m`
-                : `${Math.round((catchUpIntervalMinutes / 60) * 10) / 10}h`}
-              {" to catch up"}
+              {t.catchUpLabel(
+                catchUpIntervalMinutes < 60
+                  ? `${catchUpIntervalMinutes}m`
+                  : `${Math.round((catchUpIntervalMinutes / 60) * 10) / 10}h`
+              )}
             </Text>
           )}
         </View>
       )}
 
       <View style={{ flex: 1, minHeight: 0 }}>
-        <SectionCard title="Daily flow" variant="soft">
+        <SectionCard title={t.dailyFlow} variant="soft">
           <View style={{ flexShrink: 1 }}>
             <ProgressWidget
               consumedMl={todayMl}
@@ -485,6 +521,8 @@ export default function HomeScreen() {
               }}
             />
           </View>
+          <View style={{ height: 1, backgroundColor: "#E2E8F0", marginVertical: 4 }} />
+          <WeeklyChart data={weeklyData} goalMl={goalMl} />
         </SectionCard>
       </View>
 
@@ -517,7 +555,7 @@ export default function HomeScreen() {
           boxShadow: "0 4px 12px rgba(8, 145, 178, 0.18)",
           opacity: pressed ? 0.7 : 1,
         })}
-        accessibilityLabel="History"
+        accessibilityLabel={t.screenHistory}
         accessibilityRole="button"
       >
         <Ionicons name="bar-chart-outline" size={22} color={heroKicker} />
@@ -539,11 +577,15 @@ export default function HomeScreen() {
           boxShadow: "0 4px 12px rgba(8, 145, 178, 0.18)",
           opacity: pressed ? 0.7 : 1,
         })}
-        accessibilityLabel="Settings"
+        accessibilityLabel={t.screenSettings}
         accessibilityRole="button"
       >
         <Ionicons name="settings-outline" size={22} color={heroKicker} />
       </Pressable>
+
+      {!hasSeenOnboarding && (
+        <OnboardingTooltip onDismiss={() => setHasSeenOnboarding(true)} />
+      )}
     </View>
   );
 }

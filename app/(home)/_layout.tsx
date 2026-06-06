@@ -1,28 +1,30 @@
 import React from "react";
 import { Stack } from "expo-router/stack";
 import { Platform } from "react-native";
+import { useTranslation } from "@/lib/i18n";
 
 export default function HomeLayout() {
   const headerTitleColor = Platform.OS === "ios" ? "#0F172A" : "#111827";
+  const { t } = useTranslation();
 
   return (
     <Stack screenOptions={{ headerTitleStyle: { color: headerTitleColor } }}>
-      <Stack.Screen name="index" options={{ title: "Water", headerShown: false }} />
+      <Stack.Screen name="index" options={{ title: t.screenWater, headerShown: false }} />
       <Stack.Screen
         name="settings"
         options={{
-          title: "Settings",
+          title: t.screenSettings,
           headerShown: true,
-          headerBackTitle: "Water",
+          headerBackTitle: t.screenWater,
           headerTintColor: "#0891B2",
         }}
       />
       <Stack.Screen
         name="history"
         options={{
-          title: "History",
+          title: t.screenHistory,
           headerShown: true,
-          headerBackTitle: "Water",
+          headerBackTitle: t.screenWater,
           headerTintColor: "#0891B2",
         }}
       />

@@ -6,12 +6,14 @@ import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
 import android.util.TypedValue
 import android.view.View
 import android.widget.RemoteViews
 import androidx.core.content.ContextCompat
+import java.util.Locale
 
 object WaterWidgetUpdater {
   /** Separate ranges so PendingIntents from standard vs compact widgets never collide at the same numeric id. */
@@ -72,6 +74,18 @@ object WaterWidgetUpdater {
     return kotlin.math.min(byW, byH).coerceIn(132, 420)
   }
 
+  private fun localizedContext(context: Context, language: String): Context {
+    val locale = Locale(language)
+    val config = Configuration(context.resources.configuration)
+    config.setLocale(locale)
+    return context.createConfigurationContext(config)
+  }
+
+  fun localizedContextFromStorage(context: Context): Context {
+    val language = WaterWidgetStorage.readLanguage(context)
+    return localizedContext(context, language)
+  }
+
   private fun computeMetrics(context: Context, snapshot: WidgetSnapshot): WaterWidgetDisplayMetrics =
     WaterWidgetStorage.computeDisplayMetrics(context, snapshot)
 
@@ -86,6 +100,7 @@ object WaterWidgetUpdater {
     presetsJson: String? = null,
     glassIcon: String? = null,
     streakDays: Int = 0,
+    language: String = "en",
   ) {
     WaterWidgetStorage.write(
       context.applicationContext,
@@ -98,6 +113,7 @@ object WaterWidgetUpdater {
       presetsJson,
       glassIcon,
       streakDays,
+      language,
     )
     refreshAllWidgets(context.applicationContext)
   }
@@ -158,6 +174,8 @@ object WaterWidgetUpdater {
 
   fun refreshAllWidgets(context: Context) {
     val snapshot = WaterWidgetStorage.read(context)
+    val language = WaterWidgetStorage.readLanguage(context)
+    val lctx = localizedContext(context, language)
     val manager = AppWidgetManager.getInstance(context)
     for (providerClass in widgetProviderClasses) {
       val component = ComponentName(context, providerClass)
@@ -165,15 +183,15 @@ object WaterWidgetUpdater {
       for (id in ids) {
         val views =
           when (providerClass) {
-            WaterWidgetProvider::class.java -> buildRemoteViews(context, snapshot, id)
-            WaterCompactWidgetProvider::class.java -> buildCompactRemoteViews(context, snapshot, id)
-            WaterStreakWidgetProvider::class.java -> buildStreakRemoteViews(context, snapshot, id)
+            WaterWidgetProvider::class.java -> buildRemoteViews(lctx, snapshot, id)
+            WaterCompactWidgetProvider::class.java -> buildCompactRemoteViews(lctx, snapshot, id)
+            WaterStreakWidgetProvider::class.java -> buildStreakRemoteViews(lctx, snapshot, id)
             else -> throw IllegalStateException("Unknown widget provider")
           }
         manager.updateAppWidget(id, views)
       }
     }
-    WaterPersistentNotification.refresh(context.applicationContext)
+    WaterPersistentNotification.refresh(lctx)
   }
 
   fun buildRemoteViews(context: Context, snapshot: WidgetSnapshot, appWidgetId: Int): RemoteViews {
@@ -534,8 +552,7 @@ object WaterWidgetUpdater {
   }
 
   fun buildCompactRemoteViews(context: Context, snapshot: WidgetSnapshot, appWidgetId: Int): RemoteViews {
-    val appContext = context.applicationContext
-    val mgr = AppWidgetManager.getInstance(appContext)
+    val mgr = AppWidgetManager.getInstance(context)
     val (cw, ch) = compactHostSizeDp(mgr.getAppWidgetOptions(appWidgetId))
     val sideDp = compactComputedRingDp(cw, ch)
 
@@ -548,8 +565,8 @@ object WaterWidgetUpdater {
         else -> R.layout.water_widget_compact_l
       }
 
-    val views = RemoteViews(appContext.packageName, layoutId)
-    bindCompactRemoteViews(views, appContext, snapshot, appWidgetId)
+    val views = RemoteViews(context.packageName, layoutId)
+    bindCompactRemoteViews(views, context, snapshot, appWidgetId)
 
     if (useAdaptive && layoutId == R.layout.water_widget_compact) {
       views.setViewLayoutWidth(R.id.widget_compact_ring_cool, sideDp.toFloat(), TypedValue.COMPLEX_UNIT_DIP)

@@ -4,6 +4,7 @@ import { formatGlasses, formatMl } from "@/lib/format";
 import { QuickAddRow } from "@/components/quick-add-row";
 import { PulseOnChange } from "@/components/pulse-on-change";
 import type { QuickPreset } from "@/store/use-water-store";
+import { useTranslation } from "@/lib/i18n";
 
 type ProgressWidgetProps = {
   consumedMl: number;
@@ -21,6 +22,7 @@ type ProgressWidgetProps = {
 };
 
 export function ProgressWidget({ consumedMl, goalMl, glassMl, pacingProgress, quickAdd }: ProgressWidgetProps) {
+  const { t } = useTranslation();
   const { width } = useWindowDimensions();
   const trackWidth = Math.max(240, width - 72);
   const progress = Math.min(consumedMl / goalMl, 1);
@@ -46,7 +48,7 @@ export function ProgressWidget({ consumedMl, goalMl, glassMl, pacingProgress, qu
     <View style={{ gap: 12 }}>
       <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
         <Text selectable style={{ fontSize: 14, fontWeight: "600", color: "#0F172A" }}>
-          Progress
+          {t.progressLabel}
         </Text>
         <View
           style={{
@@ -65,7 +67,7 @@ export function ProgressWidget({ consumedMl, goalMl, glassMl, pacingProgress, qu
               fontWeight: "700",
             }}
           >
-            {formatGlasses(glasses)} glasses
+            {t.glassesUnit(formatGlasses(glasses))}
           </Text>
         </View>
       </View>
@@ -147,16 +149,16 @@ export function ProgressWidget({ consumedMl, goalMl, glassMl, pacingProgress, qu
             }}
           />
           <Text selectable style={{ fontSize: 14, fontWeight: "800", color: "#92400E" }}>
-            Goal reached
+            {t.goalReachedTitle}
           </Text>
           <Text selectable style={{ fontSize: 12, color: "#B45309" }}>
-            You hit today’s target. Celebrate the streak.
+            {t.goalReachedDesc}
           </Text>
         </View>
       ) : null}
       <PulseOnChange watch={consumedMl}>
         <Text selectable style={{ fontSize: 13, color: "#64748B" }}>
-          {formatMl(consumedMl)} of {formatMl(goalMl)}
+          {t.ofLabel(formatMl(consumedMl), formatMl(goalMl))}
         </Text>
       </PulseOnChange>
       {quickAdd ? (

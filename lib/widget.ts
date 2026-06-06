@@ -2,6 +2,7 @@ import { NativeModules, PermissionsAndroid, Platform } from "react-native";
 import { addDays, getDayKey, startOfDay } from "@/lib/date";
 import { computeStreak } from "@/lib/streak";
 import { useWaterStore, waitForWaterStoreHydration, type WaterLog } from "@/store/use-water-store";
+import type { Language } from "@/lib/i18n";
 
 type WaterWidgetPayload = {
   todayMl: number;
@@ -14,6 +15,7 @@ type WaterWidgetPayload = {
   weeklyDayTotals?: Record<string, number>;
   presets?: Array<{ amountMl: number; icon?: string }>;
   streakDays?: number;
+  language?: Language;
 };
 
 type WaterWidgetNativeModule = {
@@ -67,6 +69,7 @@ export function updateWaterWidget(
   glassIcon?: string,
   presets?: Array<{ amountMl: number; icon?: string }>,
   streakDays?: number,
+  language?: Language,
 ) {
   if (process.env.EXPO_OS !== "android") {
     return;
@@ -80,6 +83,7 @@ export function updateWaterWidget(
     if (glassIcon !== undefined) payload.glassIcon = glassIcon;
     if (presets !== undefined) payload.presets = presets;
     if (streakDays !== undefined) payload.streakDays = streakDays;
+    if (language !== undefined) payload.language = language;
     moduleRef.syncWidget(payload);
     return;
   }
@@ -126,13 +130,13 @@ export function syncAndroidWaterWidgetFromStore(): void {
   if (process.env.EXPO_OS !== "android") {
     return;
   }
-  const { logs, goalMl, glassMl, glassIcon, presets } = useWaterStore.getState();
+  const { logs, goalMl, glassMl, glassIcon, presets, language } = useWaterStore.getState();
   const dayKey = getDayKey(new Date());
   const todayMl = todayMlFromLogs(logs, dayKey);
   const weeklyPaceMl = weeklyPaceFromLogs(logs);
   const weeklyDayTotals = weeklyDayTotalsFromLogs(logs);
   const streakDays = computeStreak(logs, goalMl);
-  updateWaterWidget(todayMl, goalMl, glassMl, weeklyPaceMl, weeklyDayTotals, dayKey, glassIcon, presets, streakDays);
+  updateWaterWidget(todayMl, goalMl, glassMl, weeklyPaceMl, weeklyDayTotals, dayKey, glassIcon, presets, streakDays, language);
 }
 
 export function setAndroidPersistentNotificationEnabled(enabled: boolean): void {

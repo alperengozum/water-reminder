@@ -15,6 +15,6 @@ export function addDays(value: Date, days: number): Date {
   return next;
 }
 
-export function getShortWeekday(value: Date): string {
-  return value.toLocaleDateString(undefined, { weekday: "short" });
+export function getShortWeekday(value: Date, locale?: string): string {
+  return value.toLocaleDateString(locale, { weekday: "short" });
 }

@@ -21,6 +21,7 @@ object WaterWidgetStorage {
   private const val KEY_PRESETS_JSON = "presets_json"
   private const val KEY_GLASS_ICON = "glass_icon"
   private const val KEY_STREAK_DAYS = "streak_days"
+  private const val KEY_LANGUAGE = "language"
 
   fun localDayKeyNow(): String {
     val fmt = SimpleDateFormat("yyyy-MM-dd", Locale.US)
@@ -53,6 +54,7 @@ object WaterWidgetStorage {
     presetsJson: String? = null,
     glassIcon: String? = null,
     streakDays: Int = 0,
+    language: String = "en",
   ) {
     context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().apply {
       putFloat(KEY_TODAY_ML, todayMl)
@@ -64,9 +66,14 @@ object WaterWidgetStorage {
       if (presetsJson != null) putString(KEY_PRESETS_JSON, presetsJson)
       if (glassIcon != null) putString(KEY_GLASS_ICON, glassIcon)
       putInt(KEY_STREAK_DAYS, streakDays.coerceAtLeast(0))
+      putString(KEY_LANGUAGE, language)
       apply()
     }
   }
+
+  fun readLanguage(context: Context): String =
+    context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+      .getString(KEY_LANGUAGE, "en") ?: "en"
 
   fun read(context: Context): WidgetSnapshot {
     val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)

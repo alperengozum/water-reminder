@@ -11,10 +11,10 @@ class WaterCompactWidgetProvider : AppWidgetProvider() {
     appWidgetManager: AppWidgetManager,
     appWidgetIds: IntArray,
   ) {
-    val appContext = context.applicationContext
-    val snapshot = WaterWidgetStorage.read(appContext)
+    val lctx = WaterWidgetUpdater.localizedContextFromStorage(context.applicationContext)
+    val snapshot = WaterWidgetStorage.read(lctx)
     for (id in appWidgetIds) {
-      appWidgetManager.updateAppWidget(id, WaterWidgetUpdater.buildCompactRemoteViews(appContext, snapshot, id))
+      appWidgetManager.updateAppWidget(id, WaterWidgetUpdater.buildCompactRemoteViews(lctx, snapshot, id))
     }
   }
 
@@ -24,11 +24,11 @@ class WaterCompactWidgetProvider : AppWidgetProvider() {
     appWidgetId: Int,
     newOptions: Bundle?,
   ) {
-    val appContext = context.applicationContext
-    val snapshot = WaterWidgetStorage.read(appContext)
+    val lctx = WaterWidgetUpdater.localizedContextFromStorage(context.applicationContext)
+    val snapshot = WaterWidgetStorage.read(lctx)
     appWidgetManager.updateAppWidget(
       appWidgetId,
-      WaterWidgetUpdater.buildCompactRemoteViews(appContext, snapshot, appWidgetId),
+      WaterWidgetUpdater.buildCompactRemoteViews(lctx, snapshot, appWidgetId),
     )
   }
 }

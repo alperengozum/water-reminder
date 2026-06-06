@@ -67,6 +67,8 @@ class WaterWidgetModule(private val reactContext: ReactApplicationContext) :
       if (config.hasKey("glassIcon") && !config.isNull("glassIcon")) config.getString("glassIcon") else null
     val streakDays =
       if (config.hasKey("streakDays") && !config.isNull("streakDays")) config.getInt("streakDays") else 0
+    val language =
+      if (config.hasKey("language") && !config.isNull("language")) config.getString("language") ?: "en" else "en"
     WaterWidgetUpdater.saveAndRefresh(
       reactContext,
       todayMl,
@@ -78,6 +80,7 @@ class WaterWidgetModule(private val reactContext: ReactApplicationContext) :
       presetsJson,
       glassIcon,
       streakDays,
+      language,
     )
   }
 

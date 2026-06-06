@@ -22,6 +22,7 @@ import {
   syncAndroidWaterWidgetFromStore,
 } from "@/lib/widget";
 import { useWaterStore, type QuickPreset } from "@/store/use-water-store";
+import { useTranslation, type Language } from "@/lib/i18n";
 
 const DRINK_ICONS: string[] = [
   "water-outline",
@@ -59,6 +60,9 @@ export default function SettingsScreen() {
   const setReminderStartHour = useWaterStore((state) => state.setReminderStartHour);
   const setReminderEndHour = useWaterStore((state) => state.setReminderEndHour);
   const setStreakAlertEnabled = useWaterStore((state) => state.setStreakAlertEnabled);
+  const setLanguage = useWaterStore((state) => state.setLanguage);
+
+  const { t, language } = useTranslation();
 
   const updatePreset = React.useCallback(
     (index: number, patch: Partial<QuickPreset>) => {
@@ -125,6 +129,9 @@ export default function SettingsScreen() {
   const horizontalPad = 20;
   const columnGap = 12;
   const goalGlasses = Math.round(goalMl / glassMl);
+  const goalMlLabel = goalMl >= 1000
+    ? `= ${Number.isInteger(goalMl / 1000) ? goalMl / 1000 : (goalMl / 1000).toFixed(1)} L`
+    : `= ${goalMl} ml`;
 
   const handleReminderToggle = React.useCallback(
     async (next: boolean) => {
@@ -138,11 +145,11 @@ export default function SettingsScreen() {
       if (!granted) {
         setNotifPermissionGranted(false);
         Alert.alert(
-          "Notifications blocked",
-          "Enable notifications for Water Reminder in your device settings to receive reminders.",
+          t.notifBlockedTitle,
+          t.notifBlockedBodyReminders,
           [
-            { text: "Not now", style: "cancel" },
-            { text: "Open Settings", onPress: () => Linking.openSettings() },
+            { text: t.notNow, style: "cancel" },
+            { text: t.openSettings, onPress: () => Linking.openSettings() },
           ],
         );
         return;
@@ -172,11 +179,11 @@ export default function SettingsScreen() {
       const granted = await requestNotificationsPermission();
       if (!granted) {
         Alert.alert(
-          "Notifications blocked",
-          "Enable notifications for Water Reminder in your device settings to receive the streak alert.",
+          t.notifBlockedTitle,
+          t.notifBlockedBodyStreak,
           [
-            { text: "Not now", style: "cancel" },
-            { text: "Open Settings", onPress: () => Linking.openSettings() },
+            { text: t.notNow, style: "cancel" },
+            { text: t.openSettings, onPress: () => Linking.openSettings() },
           ],
         );
         return;
@@ -235,8 +242,9 @@ export default function SettingsScreen() {
       >
         <SectionCard variant="soft">
           <Stepper
-            label="Daily goal"
-            value={`${goalGlasses} glasses`}
+            label={t.dailyGoal}
+            value={t.goalGlasses(goalGlasses)}
+            subtitle={goalMlLabel}
             onIncrement={() => {
               impactLight();
               setGoalGlasses(goalGlasses + 1);
@@ -259,14 +267,14 @@ export default function SettingsScreen() {
               textTransform: "uppercase",
             }}
           >
-            Quick add
+            {t.quickAdd}
           </Text>
           <Text selectable style={{ fontSize: 18, fontWeight: "800", color: "#0F172A" }}>
-            Custom amounts
+            {t.customAmounts}
           </Text>
 
           <Stepper
-            label="Glass size"
+            label={t.glassSize}
             value={`${glassMl} ml`}
             onIncrement={() => {
               impactLight();
@@ -308,7 +316,7 @@ export default function SettingsScreen() {
 
               <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
                 <Text selectable style={{ fontSize: 13, fontWeight: "600", color: "#64748B" }}>
-                  Preset {index + 1}
+                  {t.preset(index + 1)}
                 </Text>
                 <Pressable
                   onPress={() => removePreset(index)}
@@ -402,7 +410,7 @@ export default function SettingsScreen() {
             >
               <Ionicons name="add-circle-outline" size={16} color="#0891B2" />
               <Text style={{ fontSize: 13, fontWeight: "700", color: "#0891B2" }}>
-                Add preset
+                {t.addPreset}
               </Text>
             </Pressable>
           )}
@@ -420,13 +428,13 @@ export default function SettingsScreen() {
                 textTransform: "uppercase",
               }}
             >
-              Reminders
+              {t.reminders}
             </Text>
             <Text selectable style={{ fontSize: 18, fontWeight: "800", color: "#0F172A" }}>
-              Drink reminders
+              {t.drinkReminders}
             </Text>
             <Text selectable style={{ fontSize: 14, lineHeight: 20, color: "#64748B" }}>
-              Get a nudge at set intervals so you don't forget to drink.
+              {t.reminderDesc}
             </Text>
           </View>
           <View
@@ -439,7 +447,7 @@ export default function SettingsScreen() {
             }}
           >
             <Text selectable style={{ flex: 1, fontSize: 15, fontWeight: "600", color: "#334155" }}>
-              On
+              {t.on}
             </Text>
             <Switch
               accessibilityLabel="Drink reminders"
@@ -467,7 +475,7 @@ export default function SettingsScreen() {
             >
               <Ionicons name="warning-outline" size={16} color="#B45309" />
               <Text style={{ flex: 1, fontSize: 13, fontWeight: "600", color: "#92400E" }}>
-                Notifications are blocked — tap to open Settings
+                {t.notifBlocked}
               </Text>
               <Ionicons name="chevron-forward" size={14} color="#B45309" />
             </Pressable>
@@ -476,8 +484,8 @@ export default function SettingsScreen() {
             <>
               <View style={{ height: 1, backgroundColor: "#E2E8F0" }} />
               <Stepper
-                label="Every"
-                value={`${reminderIntervalHours} ${reminderIntervalHours === 1 ? "hour" : "hours"}`}
+                label={t.every}
+                value={t.reminderHours(reminderIntervalHours)}
                 onIncrement={() => {
                   impactLight();
                   setReminderIntervalHours(Math.min(4, reminderIntervalHours + 1));
@@ -488,7 +496,7 @@ export default function SettingsScreen() {
                 }}
               />
               <Stepper
-                label="From"
+                label={t.from}
                 value={formatHour(reminderStartHour)}
                 onIncrement={() => {
                   impactLight();
@@ -500,7 +508,7 @@ export default function SettingsScreen() {
                 }}
               />
               <Stepper
-                label="Until"
+                label={t.until}
                 value={formatHour(reminderEndHour)}
                 onIncrement={() => {
                   impactLight();
@@ -527,13 +535,13 @@ export default function SettingsScreen() {
                 textTransform: "uppercase",
               }}
             >
-              Streak
+              {t.streakSection}
             </Text>
             <Text selectable style={{ fontSize: 18, fontWeight: "800", color: "#0F172A" }}>
-              Streak at risk alert
+              {t.streakAtRiskAlert}
             </Text>
             <Text selectable style={{ fontSize: 14, lineHeight: 20, color: "#64748B" }}>
-              Get a notification 1 hour before your window ends when you have an active streak and haven't hit your goal.
+              {t.streakAlertDesc}
             </Text>
           </View>
           <View
@@ -546,7 +554,7 @@ export default function SettingsScreen() {
             }}
           >
             <Text selectable style={{ flex: 1, fontSize: 15, fontWeight: "600", color: "#334155" }}>
-              On
+              {t.on}
             </Text>
             <Switch
               accessibilityLabel="Streak at risk alert"
@@ -571,14 +579,13 @@ export default function SettingsScreen() {
                   textTransform: "uppercase",
                 }}
               >
-                Status bar
+                {t.statusBar}
               </Text>
               <Text selectable style={{ fontSize: 18, fontWeight: "800", color: "#0F172A" }}>
-                Persistent notification
+                {t.persistentNotif}
               </Text>
               <Text selectable style={{ fontSize: 14, lineHeight: 20, color: "#64748B" }}>
-                Always-on summary in the shade; tap actions to add your glass size or +100 ml (same
-                as the home screen widget).
+                {t.persistentNotifDesc}
               </Text>
             </View>
             <View
@@ -591,7 +598,7 @@ export default function SettingsScreen() {
               }}
             >
               <Text selectable style={{ flex: 1, fontSize: 15, fontWeight: "600", color: "#334155" }}>
-                On
+                {t.on}
               </Text>
               <Switch
                 accessibilityLabel="Persistent notification"
@@ -603,6 +610,55 @@ export default function SettingsScreen() {
             </View>
           </SectionCard>
         ) : null}
+
+        <SectionCard variant="soft">
+          <View style={{ gap: 6 }}>
+            <Text
+              selectable
+              style={{
+                fontSize: 12,
+                fontWeight: "700",
+                letterSpacing: 0.6,
+                color: "#0891B2",
+                textTransform: "uppercase",
+              }}
+            >
+              {t.language}
+            </Text>
+          </View>
+          <View style={{ flexDirection: "row", gap: 10 }}>
+            {(["en", "tr"] as Language[]).map((lang) => {
+              const selected = language === lang;
+              return (
+                <Pressable
+                  key={lang}
+                  onPress={() => { impactLight(); setLanguage(lang); }}
+                  style={({ pressed }) => ({
+                    flex: 1,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    paddingVertical: 10,
+                    borderRadius: 12,
+                    borderCurve: "continuous",
+                    borderWidth: 2,
+                    borderColor: selected ? "#0891B2" : pressed ? "#BAE6FD" : "#E2E8F0",
+                    backgroundColor: selected ? "#E0F2FE" : pressed ? "#F0F9FF" : "#F8FAFC",
+                  })}
+                >
+                  <Text
+                    style={{
+                      fontSize: 14,
+                      fontWeight: "700",
+                      color: selected ? "#0891B2" : "#64748B",
+                    }}
+                  >
+                    {lang === "en" ? "English" : "Türkçe"}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </SectionCard>
 
       </ScrollView>
     </View>
