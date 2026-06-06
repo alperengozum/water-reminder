@@ -63,7 +63,7 @@ const creator: StateCreator<WaterState> = (set, get) => ({
   addGlass: () => {
     const { glassMl } = get();
     const log: WaterLog = {
-      id: `${Date.now()}`,
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       amountMl: glassMl,
       timestamp: new Date().toISOString(),
       source: "glass",
@@ -72,7 +72,7 @@ const creator: StateCreator<WaterState> = (set, get) => ({
   },
   addCustom: (amountMl: number) => {
     const log: WaterLog = {
-      id: `${Date.now()}`,
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       amountMl,
       timestamp: new Date().toISOString(),
       source: "quick",

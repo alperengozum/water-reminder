@@ -493,15 +493,6 @@ object WaterWidgetUpdater {
       ),
     )
 
-    views.setTextViewText(R.id.widget_streak_today, context.getString(R.string.widget_streak_today, m.todayInt, m.goalInt))
-    views.setTextColor(
-      R.id.widget_streak_today,
-      ContextCompat.getColor(
-        context,
-        if (m.isComplete) R.color.widget_text_warm else R.color.widget_text_muted,
-      ),
-    )
-
     views.setTextViewText(R.id.widget_streak_pct, context.getString(R.string.widget_pct_badge, m.pct))
     views.setTextColor(
       R.id.widget_streak_pct,
@@ -512,18 +503,22 @@ object WaterWidgetUpdater {
     )
 
     views.setInt(
-      R.id.widget_streak_btn,
+      R.id.widget_streak_flame,
       "setBackgroundResource",
-      if (m.isComplete) R.drawable.widget_chip_warm else R.drawable.widget_chip_cool,
+      if (hasStreak) R.drawable.widget_streak_icon_bg_warm else R.drawable.widget_streak_icon_bg,
     )
-    views.setTextViewText(R.id.widget_streak_btn, context.getString(R.string.widget_compact_btn_log_ml, m.glassInt))
-    views.setTextColor(
-      R.id.widget_streak_btn,
-      ContextCompat.getColor(
-        context,
-        if (m.isComplete) R.color.widget_btn_warm_text else R.color.widget_text_cool,
-      ),
+
+    val dotIds = listOf(
+      R.id.widget_streak_dot_0, R.id.widget_streak_dot_1, R.id.widget_streak_dot_2,
+      R.id.widget_streak_dot_3, R.id.widget_streak_dot_4, R.id.widget_streak_dot_5,
+      R.id.widget_streak_dot_6,
     )
+    val filledDot = if (m.isComplete) R.drawable.widget_streak_dot_filled_warm else R.drawable.widget_streak_dot_filled_cool
+    val emptyDot = if (m.isComplete) R.drawable.widget_streak_dot_empty_warm else R.drawable.widget_streak_dot_empty_cool
+    val streakCapped = streak.coerceIn(0, 7)
+    dotIds.forEachIndexed { i, viewId ->
+      views.setInt(viewId, "setBackgroundResource", if (i < streakCapped) filledDot else emptyDot)
+    }
 
     val homePi = PendingIntent.getActivity(
       context,
@@ -533,15 +528,8 @@ object WaterWidgetUpdater {
       },
       PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
     )
-    val glassPi = PendingIntent.getBroadcast(
-      context,
-      RC_STREAK_GLASS_OFFSET + appWidgetId,
-      Intent(WaterWidgetReceiver.ACTION_ADD_GLASS).apply { setPackage(context.packageName) },
-      PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-    )
 
     views.setOnClickPendingIntent(R.id.widget_streak_root, homePi)
-    views.setOnClickPendingIntent(R.id.widget_streak_btn, glassPi)
 
     return views
   }
