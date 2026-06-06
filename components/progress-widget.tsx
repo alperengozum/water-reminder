@@ -1,5 +1,5 @@
 import React from "react";
-import { Text, useWindowDimensions, View } from "react-native";
+import { Animated, Text, useWindowDimensions, View } from "react-native";
 import { formatGlasses, formatMl } from "@/lib/format";
 import { QuickAddRow } from "@/components/quick-add-row";
 import { PulseOnChange } from "@/components/pulse-on-change";
@@ -24,8 +24,23 @@ export function ProgressWidget({ consumedMl, goalMl, glassMl, pacingProgress, qu
   const { width } = useWindowDimensions();
   const trackWidth = Math.max(240, width - 72);
   const progress = Math.min(consumedMl / goalMl, 1);
+
+  const animatedProgress = React.useRef(new Animated.Value(progress)).current;
+  React.useEffect(() => {
+    animatedProgress.stopAnimation();
+    Animated.timing(animatedProgress, {
+      toValue: progress,
+      duration: 300,
+      useNativeDriver: false,
+    }).start();
+  }, [progress]);
   const glasses = consumedMl / glassMl;
   const isComplete = consumedMl >= goalMl && goalMl > 0;
+  const isBehindPace = pacingProgress !== undefined && progress < pacingProgress;
+  const fillColor = isComplete ? "#FBBF24" : isBehindPace ? "#FB923C" : "#22D3EE";
+  const pacingMarkerLeft = pacingProgress !== undefined
+    ? Math.max(2, Math.min(trackWidth - 4, trackWidth * pacingProgress)) - 1
+    : 0;
 
   return (
     <View style={{ gap: 12 }}>
@@ -66,13 +81,17 @@ export function ProgressWidget({ consumedMl, goalMl, glassMl, pacingProgress, qu
             boxShadow: isComplete ? "0 10px 18px rgba(234, 179, 8, 0.25)" : "none",
           }}
         >
-          <View
+          <Animated.View
             style={{
-              width: trackWidth * progress,
+              width: animatedProgress.interpolate({
+                inputRange: [0, 1],
+                outputRange: [0, trackWidth],
+                extrapolate: "clamp",
+              }),
               height: 14,
               borderRadius: 999,
               borderCurve: "continuous",
-              backgroundColor: isComplete ? "#FBBF24" : "#22D3EE",
+              backgroundColor: fillColor,
             }}
           />
         </View>
@@ -80,12 +99,12 @@ export function ProgressWidget({ consumedMl, goalMl, glassMl, pacingProgress, qu
           <View
             style={{
               position: "absolute",
-              left: Math.max(1, Math.min(trackWidth - 3, trackWidth * pacingProgress - 1)),
-              top: -3,
-              width: 2,
-              height: 20,
-              borderRadius: 1,
-              backgroundColor: "rgba(14, 116, 144, 0.55)",
+              left: pacingMarkerLeft,
+              top: -4,
+              width: 3,
+              height: 22,
+              borderRadius: 2,
+              backgroundColor: isBehindPace ? "#F97316" : "rgba(14, 116, 144, 0.7)",
             }}
           />
         )}
