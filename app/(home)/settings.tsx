@@ -513,23 +513,41 @@ export default function SettingsScreen() {
               />
             </>
           )}
-          <View style={{ height: 1, backgroundColor: "#E2E8F0" }} />
+        </SectionCard>
+
+        <SectionCard variant="soft">
+          <View style={{ gap: 6 }}>
+            <Text
+              selectable
+              style={{
+                fontSize: 12,
+                fontWeight: "700",
+                letterSpacing: 0.6,
+                color: "#0891B2",
+                textTransform: "uppercase",
+              }}
+            >
+              Streak
+            </Text>
+            <Text selectable style={{ fontSize: 18, fontWeight: "800", color: "#0F172A" }}>
+              Streak at risk alert
+            </Text>
+            <Text selectable style={{ fontSize: 14, lineHeight: 20, color: "#64748B" }}>
+              Get a notification 1 hour before your window ends when you have an active streak and haven't hit your goal.
+            </Text>
+          </View>
           <View
             style={{
               flexDirection: "row",
               alignItems: "center",
               justifyContent: "space-between",
               gap: 16,
+              paddingTop: 4,
             }}
           >
-            <View style={{ flex: 1, gap: 2 }}>
-              <Text selectable style={{ fontSize: 15, fontWeight: "600", color: "#334155" }}>
-                Streak at risk alert
-              </Text>
-              <Text selectable style={{ fontSize: 13, color: "#64748B" }}>
-                Fires 1 hour before window ends when streak is active
-              </Text>
-            </View>
+            <Text selectable style={{ flex: 1, fontSize: 15, fontWeight: "600", color: "#334155" }}>
+              On
+            </Text>
             <Switch
               accessibilityLabel="Streak at risk alert"
               value={streakAlertEnabled}

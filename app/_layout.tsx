@@ -1,6 +1,6 @@
 import React from "react";
 import { Stack } from "expo-router/stack";
-import { AppState, Platform } from "react-native";
+import { AppState, DeviceEventEmitter, Platform } from "react-native";
 import "@/lib/notifications";
 import {
   flushWidgetPendingAdds,
@@ -22,7 +22,7 @@ export default function RootLayout() {
       syncAndroidWaterWidgetFromStore();
     });
 
-    const sub = AppState.addEventListener("change", (state) => {
+    const appStateSub = AppState.addEventListener("change", (state) => {
       if (state === "active") {
         void flushWidgetPendingAdds().then(() => {
           syncAndroidWaterWidgetFromStore();
@@ -30,7 +30,16 @@ export default function RootLayout() {
       }
     });
 
-    return () => sub.remove();
+    const eventSub = DeviceEventEmitter.addListener("waterWidgetPendingAdd", () => {
+      void flushWidgetPendingAdds().then(() => {
+        syncAndroidWaterWidgetFromStore();
+      });
+    });
+
+    return () => {
+      appStateSub.remove();
+      eventSub.remove();
+    };
   }, []);
 
   return (

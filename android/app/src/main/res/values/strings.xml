@@ -16,10 +16,9 @@
   <string name="notif_headline_complete">Daily goal reached</string>
   <string name="notif_title">%1$d / %2$d ml</string>
   <string name="notif_summary">%1$d%% · Glass %2$d ml</string>
-  <string name="notif_big_body_progress">About %1$d ml left to reach your goal.\nAdd a glass (%2$d ml) or +100 ml below.</string>
+  <string name="notif_big_body_progress">About %1$d ml left to reach your goal.\nAdd a glass (%2$d ml) using the actions below.</string>
   <string name="notif_big_body_complete">Nice work — you hit your goal.\nYou can still add more using the actions below.</string>
   <string name="notif_action_glass">+%1$d ml</string>
-  <string name="notif_action_quick">+100 ml</string>
   <!-- Widget picker preview (previewLayout only) -->
   <string name="widget_preview_badge">65%</string>
   <string name="widget_preview_primary">1,200 / 2,000 ml · 250 ml glass</string>

@@ -28,7 +28,8 @@ object WaterPersistentNotification {
       return
     }
     ensureChannel(app)
-    val m = WaterWidgetStorage.computeDisplayMetrics(app, WaterWidgetStorage.read(app))
+    val snap = WaterWidgetStorage.read(app)
+    val m = WaterWidgetStorage.computeDisplayMetrics(app, snap)
 
     val accentColor =
       ContextCompat.getColor(
@@ -91,12 +92,14 @@ object WaterPersistentNotification {
         glassActionTitle,
         broadcastPi(WaterWidgetReceiver.ACTION_ADD_GLASS, RC_ADD_GLASS),
       ).build()
-    val quickAction =
+    val preset0 = snap.presets.firstOrNull()
+    val quickAction = preset0?.let {
       NotificationCompat.Action.Builder(
         IconCompat.createWithResource(app, R.drawable.ic_notif_action_plus),
-        app.getString(R.string.notif_action_quick),
+        app.getString(R.string.notif_action_glass, it.amountMl.toInt()),
         broadcastPi(WaterWidgetReceiver.ACTION_ADD_QUICK, RC_ADD_QUICK),
       ).build()
+    }
 
     val deletePi =
       PendingIntent.getBroadcast(
@@ -126,7 +129,7 @@ object WaterPersistentNotification {
         .setShowWhen(false)
         .setSilent(true)
         .addAction(glassAction)
-        .addAction(quickAction)
+        .apply { if (quickAction != null) addAction(quickAction) }
 
     val nm = app.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
     nm.notify(NOTIFICATION_ID, builder.build())

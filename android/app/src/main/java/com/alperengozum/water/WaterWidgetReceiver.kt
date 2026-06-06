@@ -26,6 +26,7 @@ class WaterWidgetReceiver : BroadcastReceiver() {
       else -> return
     }
     WaterWidgetUpdater.refreshAllWidgets(app)
+    WaterWidgetModule.emitPendingAdd()
   }
 
   private fun addPresetByIndex(context: Context, index: Int) {

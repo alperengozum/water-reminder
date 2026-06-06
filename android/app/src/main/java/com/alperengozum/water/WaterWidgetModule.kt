@@ -7,11 +7,29 @@ import com.facebook.react.bridge.ReactApplicationContext
 import com.facebook.react.bridge.ReactContextBaseJavaModule
 import com.facebook.react.bridge.ReactMethod
 import com.facebook.react.bridge.ReadableMap
+import com.facebook.react.modules.core.DeviceEventManagerModule
 
 class WaterWidgetModule(private val reactContext: ReactApplicationContext) :
   ReactContextBaseJavaModule(reactContext) {
 
+  init {
+    instance = this
+  }
+
   override fun getName(): String = "WaterWidget"
+
+  companion object {
+    private const val EVENT_PENDING_ADD = "waterWidgetPendingAdd"
+    private var instance: WaterWidgetModule? = null
+
+    fun emitPendingAdd() {
+      val ctx = instance?.reactContext ?: return
+      try {
+        ctx.getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
+          ?.emit(EVENT_PENDING_ADD, null)
+      } catch (_: Exception) {}
+    }
+  }
 
   /** Legacy arity (3) — kept for older dev builds / TurboModule descriptor cache; weekly pace defaults to 0. */
   @ReactMethod
