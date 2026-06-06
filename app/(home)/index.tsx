@@ -284,11 +284,8 @@ export default function HomeScreen() {
         gap: columnGap,
       }}
     >
-      <Pressable
-        onPress={handleAddGlass}
-        accessibilityLabel={`Log ${glassMl} ml`}
-        accessibilityRole="button"
-        style={({ pressed }) => ({
+      <View
+        style={{
           flexShrink: 0,
           backgroundColor: heroBackground,
           borderRadius: 28,
@@ -297,8 +294,7 @@ export default function HomeScreen() {
           gap: 8,
           overflow: "hidden",
           boxShadow: "0 16px 28px rgba(8, 145, 178, 0.12)",
-          opacity: pressed ? 0.82 : 1,
-        })}
+        }}
       >
         <View
           style={{
@@ -361,26 +357,7 @@ export default function HomeScreen() {
             </Text>
           </PulseOnChange>
         </View>
-        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "flex-end" }}>
-          <View
-            style={{
-              flexDirection: "row",
-              alignItems: "center",
-              gap: 5,
-              paddingHorizontal: 12,
-              paddingVertical: 6,
-              borderRadius: 999,
-              borderCurve: "continuous",
-              backgroundColor: heroTagBackground,
-            }}
-          >
-            <Ionicons name={(glassIcon ?? "water-outline") as any} size={13} color={heroTagText} />
-            <Text style={{ fontSize: 12, fontWeight: "700", color: heroTagText }}>
-              Log {glassMl} ml
-            </Text>
-          </View>
-        </View>
-      </Pressable>
+      </View>
 
       <StreakCard streak={streak} isComplete={isComplete} />
 
