@@ -621,12 +621,13 @@ export default function SettingsScreen() {
             </Text>
           </View>
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
-            {(["en", "tr", "hi", "pt", "es", "ar", "id", "ru", "ja", "ko", "de", "fr"] as Language[]).map((lang) => {
+            {(["en", "tr", "hi", "pt", "es", "ar", "id", "ru", "ja", "ko", "de", "fr", "zh", "bn", "vi", "th", "it"] as Language[]).map((lang) => {
               const selected = language === lang;
               const nativeNames: Record<Language, string> = {
                 en: "English", tr: "Türkçe", hi: "हिन्दी",
                 pt: "Português", es: "Español", ar: "العربية", id: "Indonesia",
                 ru: "Русский", ja: "日本語", ko: "한국어", de: "Deutsch", fr: "Français",
+                zh: "中文", bn: "বাংলা", vi: "Tiếng Việt", th: "ภาษาไทย", it: "Italiano",
               };
               return (
                 <Pressable
