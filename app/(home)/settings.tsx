@@ -620,15 +620,20 @@ export default function SettingsScreen() {
               {t.language}
             </Text>
           </View>
-          <View style={{ flexDirection: "row", gap: 10 }}>
-            {(["en", "tr"] as Language[]).map((lang) => {
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+            {(["en", "tr", "hi", "pt", "es", "ar", "id", "ru", "ja", "ko", "de", "fr"] as Language[]).map((lang) => {
               const selected = language === lang;
+              const nativeNames: Record<Language, string> = {
+                en: "English", tr: "Türkçe", hi: "हिन्दी",
+                pt: "Português", es: "Español", ar: "العربية", id: "Indonesia",
+                ru: "Русский", ja: "日本語", ko: "한국어", de: "Deutsch", fr: "Français",
+              };
               return (
                 <Pressable
                   key={lang}
                   onPress={() => { impactLight(); setLanguage(lang); }}
                   style={({ pressed }) => ({
-                    flex: 1,
+                    width: "31%",
                     alignItems: "center",
                     justifyContent: "center",
                     paddingVertical: 10,
@@ -641,12 +646,12 @@ export default function SettingsScreen() {
                 >
                   <Text
                     style={{
-                      fontSize: 14,
+                      fontSize: 13,
                       fontWeight: "700",
                       color: selected ? "#0891B2" : "#64748B",
                     }}
                   >
-                    {lang === "en" ? "English" : "Türkçe"}
+                    {nativeNames[lang]}
                   </Text>
                 </Pressable>
               );
