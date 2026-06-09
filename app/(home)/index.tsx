@@ -10,14 +10,14 @@ import { ProgressWidget } from "@/components/progress-widget";
 import { StreakCard } from "@/components/streak-card";
 import { WeeklyChart } from "@/components/weekly-chart";
 import { UndoToast } from "@/components/undo-toast";
-import { OnboardingTooltip } from "@/components/onboarding-tooltip";
+import { OnboardingWizard } from "@/components/onboarding-wizard";
 import { addDays, getDayKey, getShortWeekday, startOfDay } from "@/lib/date";
 import { formatGlasses, formatMl } from "@/lib/format";
 import { computeStreak } from "@/lib/streak";
 import { impactMedium, notifySuccess } from "@/lib/haptics";
 import { cancelStreakAtRiskAlert, cancelWaterReminders, scheduleStreakAtRiskAlert, scheduleWaterReminders } from "@/lib/notifications";
 import { flushWidgetPendingAdds, setAndroidAppIconComplete, syncAndroidWaterWidgetFromStore } from "@/lib/widget";
-import { useWaterStore, waitForWaterStoreHydration } from "@/store/use-water-store";
+import { useIsHydrated, useWaterStore, waitForWaterStoreHydration } from "@/store/use-water-store";
 import { useTranslation } from "@/lib/i18n";
 
 export default function HomeScreen() {
@@ -38,6 +38,7 @@ export default function HomeScreen() {
   const hasSeenOnboarding = useWaterStore((state) => state.hasSeenOnboarding);
   const setHasSeenOnboarding = useWaterStore((state) => state.setHasSeenOnboarding);
 
+  const isHydrated = useIsHydrated();
   const { t, language } = useTranslation();
   const insets = useSafeAreaInsets();
 
@@ -66,8 +67,9 @@ export default function HomeScreen() {
   // 0–1 fraction of the drinking window elapsed; null when outside the window or complete
   const windowProgress = React.useMemo(() => {
     if (isComplete) return null;
-    const hour = new Date().getHours() + new Date().getMinutes() / 60;
-    if (hour <= reminderStartHour || hour >= reminderEndHour) return null;
+    const now = new Date();
+    const hour = now.getHours() + now.getMinutes() / 60;
+    if (hour < reminderStartHour || hour >= reminderEndHour) return null;
     return (hour - reminderStartHour) / (reminderEndHour - reminderStartHour);
   }, [isComplete, reminderStartHour, reminderEndHour]);
 
@@ -79,9 +81,10 @@ export default function HomeScreen() {
   }, [windowProgress, todayMl, goalMl, glassMl]);
 
   const hoursLeftInWindow = React.useMemo(() => {
-    const hour = new Date().getHours() + new Date().getMinutes() / 60;
+    const now = new Date();
+    const hour = now.getHours() + now.getMinutes() / 60;
     if (hour >= reminderEndHour) return null;
-    return Math.ceil(reminderEndHour - hour);
+    return Math.floor(reminderEndHour - hour);
   }, [reminderEndHour]);
 
   const streak = React.useMemo(() => computeStreak(dailyTotals, goalMl), [dailyTotals, goalMl]);
@@ -90,6 +93,7 @@ export default function HomeScreen() {
     const rounded = Math.round(todayGlasses * 10) / 10;
     const hour = new Date().getHours();
     if (rounded <= 0) {
+      if (logs.length === 0) return t.summaryDayZero;
       if (hour < 10) {
         return streak > 0
           ? t.summaryMorningStreak(streak + 1)
@@ -109,7 +113,7 @@ export default function HomeScreen() {
     if (hour >= 20 && !isComplete) return t.summaryLastChance;
     if (rounded === 1) return t.summary1Glass;
     return t.summaryGlasses(rounded);
-  }, [todayGlasses, pacingBehindGlasses, hoursLeftInWindow, streak, isComplete, t]);
+  }, [logs, todayGlasses, pacingBehindGlasses, hoursLeftInWindow, streak, isComplete, t]);
 
   const remainingGlasses = Math.max(0, Math.ceil((goalMl - todayMl) / glassMl));
 
@@ -122,7 +126,7 @@ export default function HomeScreen() {
 
   // "Next drink" hint — derived from last drink + interval, or window start if no drinks today
   const nextDrinkHint = React.useMemo(() => {
-    if (isComplete) return null;
+    if (isComplete || !reminderEnabled) return null;
     const now = new Date();
     const nowHour = now.getHours() + now.getMinutes() / 60;
     if (nowHour >= reminderEndHour) return null;
@@ -136,14 +140,14 @@ export default function HomeScreen() {
       nextMs = windowStart.getTime();
     }
     const next = new Date(nextMs);
-    if (next <= now) return "Drink now";
+    if (next <= now) return t.drinkNow;
     const h = next.getHours();
     const m = next.getMinutes();
     const period = h < 12 ? "AM" : "PM";
     const displayH = h % 12 || 12;
     const displayM = m === 0 ? "" : `:${String(m).padStart(2, "0")}`;
-    return `Next · ${displayH}${displayM} ${period}`;
-  }, [isComplete, logs, todayKey, reminderIntervalHours, reminderStartHour, reminderEndHour]);
+    return t.nextDrinkAt(`${displayH}${displayM} ${period}`);
+  }, [isComplete, reminderEnabled, logs, todayKey, reminderIntervalHours, reminderStartHour, reminderEndHour, t]);
 
   const pageBackground = isComplete ? "#FFFBEB" : "#F8FAFC";
   const heroBackground = isComplete ? "#FEF3C7" : "#ECFEFF";
@@ -313,6 +317,10 @@ export default function HomeScreen() {
     return () => sub.remove();
   }, []);
 
+  if (!isHydrated) {
+    return <View style={{ flex: 1, backgroundColor: "#F8FAFC" }} />;
+  }
+
   const horizontalPad = 20;
   const columnGap = 12;
 
@@ -407,7 +415,9 @@ export default function HomeScreen() {
         </View>
       </View>
 
-      <StreakCard streak={streak} isComplete={isComplete} remainingGlasses={remainingGlasses} />
+      {(streak > 0 || isComplete) && (
+        <StreakCard streak={streak} isComplete={isComplete} remainingGlasses={remainingGlasses} />
+      )}
 
       <View style={{ flexDirection: "row", gap: 12, flexShrink: 0 }}>
         <View style={{ flex: 1 }}>
@@ -532,6 +542,52 @@ export default function HomeScreen() {
         </View>
       )}
 
+      <View
+        pointerEvents="box-none"
+        style={{
+          position: "absolute",
+          bottom: Math.max(insets.bottom, 12) + 12,
+          left: 0,
+          right: 0,
+          alignItems: "center",
+        }}
+      >
+        {logs.length === 0 && hasSeenOnboarding && (
+          <Text
+            selectable={false}
+            style={{
+              fontSize: 12,
+              fontWeight: "700",
+              color: "#0891B2",
+              marginBottom: 8,
+              letterSpacing: 0.2,
+            }}
+          >
+            {t.firstLogHint}
+          </Text>
+        )}
+        <Pressable
+          onPress={handleAddGlass}
+          hitSlop={8}
+          style={({ pressed }) => ({
+            width: 60,
+            height: 60,
+            borderRadius: 30,
+            backgroundColor: isComplete ? "#D97706" : "#0891B2",
+            alignItems: "center",
+            justifyContent: "center",
+            boxShadow: isComplete
+              ? "0 4px 18px rgba(217, 119, 6, 0.40)"
+              : "0 4px 18px rgba(8, 145, 178, 0.40)",
+            opacity: pressed ? 0.8 : 1,
+          })}
+          accessibilityLabel={t.addGlassLabel(`${glassMl} ml`)}
+          accessibilityRole="button"
+        >
+          <Ionicons name={(glassIcon ?? "water-outline") as any} size={26} color="#FFFFFF" />
+        </Pressable>
+      </View>
+
       <Pressable
         onPress={() => router.push("/history")}
         hitSlop={12}
@@ -576,8 +632,8 @@ export default function HomeScreen() {
         <Ionicons name="settings-outline" size={22} color={heroKicker} />
       </Pressable>
 
-      {!hasSeenOnboarding && (
-        <OnboardingTooltip onDismiss={() => setHasSeenOnboarding(true)} />
+      {!hasSeenOnboarding && isHydrated && (
+        <OnboardingWizard onDismiss={() => setHasSeenOnboarding(true)} />
       )}
     </View>
   );

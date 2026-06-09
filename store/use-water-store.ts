@@ -1,3 +1,4 @@
+import React from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
 import type { StateCreator } from "zustand";
@@ -186,10 +187,30 @@ export const useWaterStore = create<WaterState>()(
     onRehydrateStorage: () => (state) => {
       if (state) {
         state.dailyTotals = buildDailyTotals(state.logs);
+        if (!state.hasSeenOnboarding) {
+          try {
+            const raw = Intl.DateTimeFormat().resolvedOptions().locale;
+            const tag = raw.split("-")[0].toLowerCase() as Language;
+            const supported: Language[] = ["en","tr","hi","pt","es","ar","id","ru","ja","ko","de","fr","zh","bn","vi","th","it"];
+            if (supported.includes(tag)) {
+              state.language = tag;
+            }
+          } catch {}
+        }
       }
     },
   }),
 );
+
+export function useIsHydrated(): boolean {
+  const [hydrated, setHydrated] = React.useState(() => useWaterStore.persist.hasHydrated());
+  React.useEffect(() => {
+    if (hydrated) return;
+    const unsub = useWaterStore.persist.onFinishHydration(() => setHydrated(true));
+    return unsub;
+  }, [hydrated]);
+  return hydrated;
+}
 
 export function waitForWaterStoreHydration(): Promise<void> {
   if (useWaterStore.persist.hasHydrated()) {

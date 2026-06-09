@@ -161,7 +161,7 @@ export default function SettingsScreen() {
       const remainingGlasses = Math.max(0, Math.ceil((gMl - todayMl) / glMl));
       await scheduleWaterReminders(reminderIntervalHours, reminderStartHour, reminderEndHour, undefined, streakAlertEnabled ? { streak, remainingGlasses } : undefined);
     },
-    [reminderIntervalHours, reminderStartHour, reminderEndHour, setReminderEnabled],
+    [reminderIntervalHours, reminderStartHour, reminderEndHour, setReminderEnabled, streakAlertEnabled, t],
   );
 
   const handleStreakAlertToggle = React.useCallback(
@@ -196,7 +196,7 @@ export default function SettingsScreen() {
         await scheduleStreakAtRiskAlert(streak, remainingGlasses, reminderEndHour, reminderStartHour);
       }
     },
-    [reminderEnabled, reminderEndHour, reminderStartHour, setStreakAlertEnabled],
+    [reminderEnabled, reminderEndHour, reminderStartHour, setStreakAlertEnabled, t],
   );
 
   const onPersistentNotificationChange = React.useCallback(
@@ -285,7 +285,7 @@ export default function SettingsScreen() {
               return (
                 <Pressable
                   key={iconName}
-                  onPress={() => { impactLight(); setGlassIcon(isSelected ? undefined : iconName); }}
+                  onPress={() => { impactLight(); setGlassIcon(glassIcon === iconName ? undefined : iconName); }}
                   style={({ pressed }) => ({
                     width: 40, height: 40, borderRadius: 12, borderCurve: "continuous",
                     backgroundColor: isSelected ? "#BFDBFE" : pressed ? "#E2E8F0" : "#F1F5F9",

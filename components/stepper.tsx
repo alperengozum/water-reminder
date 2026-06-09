@@ -24,7 +24,7 @@ export function Stepper({ label, value, subtitle, onIncrement, onDecrement }: St
             height: 36,
             borderRadius: 14,
             borderCurve: "continuous",
-            backgroundColor: pressed ? "#E2E8F0" : "#E2E8F0",
+            backgroundColor: pressed ? "#CBD5E1" : "#E2E8F0",
             alignItems: "center",
             justifyContent: "center",
             boxShadow: "0 6px 12px rgba(15, 23, 42, 0.06)",
