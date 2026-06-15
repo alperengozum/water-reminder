@@ -11,6 +11,18 @@ A beautiful, lightweight hydration tracker for Android. Log water with one tap, 
 
 ---
 
+## Screenshots
+
+<p align="center">
+  <img src="docs/screenshots/home.png" alt="Home screen — daily progress" width="270"/>
+  &nbsp;&nbsp;&nbsp;
+  <img src="docs/screenshots/goal-reached.png" alt="Goal reached — warm theme + streak" width="270"/>
+  &nbsp;&nbsp;&nbsp;
+  <img src="docs/screenshots/settings.png" alt="Settings — goal, glass size, presets" width="270"/>
+</p>
+
+---
+
 ## Why Water Reminder?
 
 Most hydration apps are bloated. Water Reminder does one thing well: it makes drinking water a habit you actually keep.
