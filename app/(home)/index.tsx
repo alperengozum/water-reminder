@@ -16,7 +16,7 @@ import { formatGlasses, formatMl } from "@/lib/format";
 import { computeStreak } from "@/lib/streak";
 import { impactMedium, notifySuccess } from "@/lib/haptics";
 import { cancelStreakAtRiskAlert, cancelWaterReminders, scheduleStreakAtRiskAlert, scheduleWaterReminders } from "@/lib/notifications";
-import { flushWidgetPendingAdds, setAndroidAppIconComplete, syncAndroidWaterWidgetFromStore } from "@/lib/widget";
+import { setAndroidAppIconComplete, syncAndroidWaterWidgetFromStore } from "@/lib/widget";
 import { useIsHydrated, useWaterStore, waitForWaterStoreHydration } from "@/store/use-water-store";
 import { useTranslation } from "@/lib/i18n";
 
@@ -288,14 +288,9 @@ export default function HomeScreen() {
     if (Platform.OS !== "android") {
       return;
     }
-    let cancelled = false;
-    void flushWidgetPendingAdds().then(() => {
-      if (cancelled) return;
-      if (widgetSyncTimerRef.current) clearTimeout(widgetSyncTimerRef.current);
-      widgetSyncTimerRef.current = setTimeout(syncAndroidWaterWidgetFromStore, 150);
-    });
+    if (widgetSyncTimerRef.current) clearTimeout(widgetSyncTimerRef.current);
+    widgetSyncTimerRef.current = setTimeout(syncAndroidWaterWidgetFromStore, 150);
     return () => {
-      cancelled = true;
       if (widgetSyncTimerRef.current) {
         clearTimeout(widgetSyncTimerRef.current);
         widgetSyncTimerRef.current = null;
