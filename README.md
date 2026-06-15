@@ -154,6 +154,19 @@ npm run eas:submit:android
 
 ---
 
+## Claude Code Skills
+
+Project-specific slash commands for Claude Code (`.claude/commands/`):
+
+| Command | What it does |
+|---|---|
+| `/product` | Product thinking session — reads current app state, identifies user friction, proposes ranked improvements, picks one to build |
+| `/changelog` | Generates Play Store release notes for the current version across 18 locales, ready to paste into Play Console |
+
+Run from Claude Code CLI or any IDE extension while inside this project.
+
+---
+
 ## Release Notes
 
 See [RELEASE_NOTES.md](./RELEASE_NOTES.md) for full changelog.
