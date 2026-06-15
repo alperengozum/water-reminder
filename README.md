@@ -150,4 +150,11 @@ See [RELEASE_NOTES.md](./RELEASE_NOTES.md) for full changelog.
 
 ## License
 
-Private. All rights reserved.
+Copyright © 2026 Alperen Gözüm
+
+Source available under the [PolyForm Noncommercial License 1.0.0](LICENSE).
+
+- Study, experiment, and learn freely ✅
+- Personal and educational use ✅
+- Commercial use by others ❌
+- Must include copyright notice when distributing ✅
