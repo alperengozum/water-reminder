@@ -14,11 +14,23 @@ A beautiful, lightweight hydration tracker for Android. Log water with one tap, 
 ## Screenshots
 
 <p align="center">
-  <img src="docs/screenshots/home.png" alt="Home screen — daily progress" width="270"/>
-  &nbsp;&nbsp;&nbsp;
-  <img src="docs/screenshots/goal-reached.png" alt="Goal reached — warm theme + streak" width="270"/>
-  &nbsp;&nbsp;&nbsp;
-  <img src="docs/screenshots/settings.png" alt="Settings — goal, glass size, presets" width="270"/>
+  <img src="docs/screenshots/home.png" alt="Home screen — daily progress" width="200"/>
+  &nbsp;&nbsp;
+  <img src="docs/screenshots/goal-reached.png" alt="Goal reached — warm theme + streak" width="200"/>
+  &nbsp;&nbsp;
+  <img src="docs/screenshots/history.png" alt="History — calendar + 30-day stats" width="200"/>
+  &nbsp;&nbsp;
+  <img src="docs/screenshots/settings.png" alt="Settings — goal, glass size, presets" width="200"/>
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/settings-presets.png" alt="Settings — custom presets with icon picker" width="200"/>
+  &nbsp;&nbsp;
+  <img src="docs/screenshots/settings-reminders.png" alt="Settings — drink reminders + streak alert" width="200"/>
+  &nbsp;&nbsp;
+  <img src="docs/screenshots/widget.png" alt="Home screen widgets — progress ring + streak strip" width="200"/>
+  &nbsp;&nbsp;
+  <img src="docs/screenshots/notification.png" alt="Persistent notification — goal reached state" width="200"/>
 </p>
 
 ---
@@ -39,10 +51,15 @@ Most hydration apps are bloated. Water Reminder does one thing well: it makes dr
 
 ### Core
 - Daily water intake tracker with configurable goal and glass size
-- Quick-add buttons (glass size, +100ml) with haptic feedback
+- Quick-add buttons (configurable presets with icon picker) with haptic feedback
 - Undo toast — reverse the last log within 4 seconds
 - Weekly bar chart for intake history
 - Goal-reached warm color theme transition
+
+### History
+- Monthly calendar with color-coded days (None / Partial / Goal)
+- 30-day stats: best streak, daily average, goal days count, best day ever
+- 30-day trend line chart with goal target line
 
 ### Android Home Screen Widgets
 - **Main widget** — today's intake progress + preset quick-add buttons + streak count
@@ -51,8 +68,9 @@ Most hydration apps are bloated. Water Reminder does one thing well: it makes dr
 - Midnight auto-reset via scheduled alarm
 
 ### Smart Reminders
-- Persistent status-bar notification with preset quick-add actions
-- Drink-aware scheduling — fewer nudges when you're on track
+- Drink reminders at configurable interval (e.g. every 2 hours) within a set time window (e.g. 8 AM – 10 PM)
+- Streak at-risk alert — notification 1 hour before your window ends if goal not yet hit
+- Persistent status-bar notification with quick-add actions; shows "Daily goal reached" state when complete
 - Auto-cancel when daily goal is reached; auto-restore when a log is removed
 - Restores correctly after device reboot and next-morning launch
 
@@ -88,7 +106,8 @@ app/
   _layout.tsx          # Root Stack; widget-sync bootstrap on mount
   (home)/
     index.tsx          # Dashboard — progress, chart, quick-add
-    settings.tsx       # Goal/glass config, notification toggle, log list
+    history.tsx        # Monthly calendar, 30-day stats, trend chart
+    settings.tsx       # Goal/glass config, presets, reminders, notification toggle, log list
   widget.tsx           # Deep-link handler for Android widget taps
 
 store/
