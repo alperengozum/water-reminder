@@ -2,20 +2,24 @@ import * as Notifications from "expo-notifications";
 import { getT } from "@/lib/i18n";
 import { useWaterStore } from "@/store/use-water-store";
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  }),
-});
+if (process.env.EXPO_OS !== "web") {
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowAlert: true,
+      shouldPlaySound: true,
+      shouldSetBadge: false,
+    }),
+  });
+}
 
 export async function checkNotificationsPermission(): Promise<boolean> {
+  if (process.env.EXPO_OS === "web") return false;
   const { status } = await Notifications.getPermissionsAsync();
   return status === "granted";
 }
 
 export async function requestNotificationsPermission(): Promise<boolean> {
+  if (process.env.EXPO_OS === "web") return false;
   const t = getT(useWaterStore.getState().language);
   if (process.env.EXPO_OS === "android") {
     await Notifications.setNotificationChannelAsync("water-reminders", {
@@ -56,6 +60,7 @@ export async function scheduleWaterReminders(
   lastDrinkAt?: Date,
   streakAlert?: { streak: number; remainingGlasses: number },
 ): Promise<void> {
+  if (process.env.EXPO_OS === "web") return;
   await Notifications.cancelAllScheduledNotificationsAsync();
 
   const now = new Date();
@@ -176,14 +181,17 @@ export async function scheduleStreakAtRiskAlert(
   endHour: number,
   startHour: number,
 ): Promise<void> {
+  if (process.env.EXPO_OS === "web") return;
   await Notifications.cancelScheduledNotificationAsync(STREAK_ALERT_ID);
   await _doScheduleStreakAlert(streak, remainingGlasses, endHour, startHour, new Date());
 }
 
 export async function cancelStreakAtRiskAlert(): Promise<void> {
+  if (process.env.EXPO_OS === "web") return;
   await Notifications.cancelScheduledNotificationAsync(STREAK_ALERT_ID);
 }
 
 export async function cancelWaterReminders(): Promise<void> {
+  if (process.env.EXPO_OS === "web") return;
   await Notifications.cancelAllScheduledNotificationsAsync();
 }
