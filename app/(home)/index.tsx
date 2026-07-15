@@ -58,7 +58,36 @@ export default function HomeScreen() {
     };
   }, []);
 
-  const todayKey = getDayKey(new Date());
+  // "Current moment" used for all day/time-boundary math below. Refreshed at the next
+  // local midnight and whenever the app returns to the foreground — otherwise, if the
+  // screen stays mounted (or is merely backgrounded/foregrounded with no store change)
+  // across midnight, nothing re-triggers a render and today's totals/progress get stuck
+  // showing the previous day.
+  const [now, setNow] = React.useState(() => new Date());
+  React.useEffect(() => {
+    let midnightTimer: ReturnType<typeof setTimeout> | null = null;
+    const scheduleMidnightTick = () => {
+      const next = new Date();
+      next.setHours(24, 0, 5, 0);
+      const ms = Math.max(1000, next.getTime() - Date.now());
+      midnightTimer = setTimeout(() => {
+        setNow(new Date());
+        scheduleMidnightTick();
+      }, ms);
+    };
+    scheduleMidnightTick();
+
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state === "active") setNow(new Date());
+    });
+
+    return () => {
+      if (midnightTimer) clearTimeout(midnightTimer);
+      sub.remove();
+    };
+  }, []);
+
+  const todayKey = getDayKey(now);
   const todayMl = dailyTotals[todayKey] ?? 0;
 
   const todayGlasses = todayMl / glassMl;
@@ -67,11 +96,10 @@ export default function HomeScreen() {
   // 0–1 fraction of the drinking window elapsed; null when outside the window or complete
   const windowProgress = React.useMemo(() => {
     if (isComplete) return null;
-    const now = new Date();
     const hour = now.getHours() + now.getMinutes() / 60;
     if (hour < reminderStartHour || hour >= reminderEndHour) return null;
     return (hour - reminderStartHour) / (reminderEndHour - reminderStartHour);
-  }, [isComplete, reminderStartHour, reminderEndHour]);
+  }, [isComplete, reminderStartHour, reminderEndHour, now]);
 
   // Glasses behind schedule: positive = behind, negative = ahead
   const pacingBehindGlasses = React.useMemo(() => {
@@ -81,17 +109,16 @@ export default function HomeScreen() {
   }, [windowProgress, todayMl, goalMl, glassMl]);
 
   const hoursLeftInWindow = React.useMemo(() => {
-    const now = new Date();
     const hour = now.getHours() + now.getMinutes() / 60;
     if (hour >= reminderEndHour) return null;
     return Math.floor(reminderEndHour - hour);
-  }, [reminderEndHour]);
+  }, [reminderEndHour, now]);
 
   const streak = React.useMemo(() => computeStreak(dailyTotals, goalMl), [dailyTotals, goalMl]);
 
   const summary = React.useMemo(() => {
     const rounded = Math.round(todayGlasses * 10) / 10;
-    const hour = new Date().getHours();
+    const hour = now.getHours();
     if (rounded <= 0) {
       if (logs.length === 0) return t.summaryDayZero;
       if (hour < 10) {
@@ -113,7 +140,7 @@ export default function HomeScreen() {
     if (hour >= 20 && !isComplete) return t.summaryLastChance;
     if (rounded === 1) return t.summary1Glass;
     return t.summaryGlasses(rounded);
-  }, [logs, todayGlasses, pacingBehindGlasses, hoursLeftInWindow, streak, isComplete, t]);
+  }, [logs, todayGlasses, pacingBehindGlasses, hoursLeftInWindow, streak, isComplete, t, now]);
 
   const remainingGlasses = Math.max(0, Math.ceil((goalMl - todayMl) / glassMl));
 
@@ -127,7 +154,6 @@ export default function HomeScreen() {
   // "Next drink" hint — derived from last drink + interval, or window start if no drinks today
   const nextDrinkHint = React.useMemo(() => {
     if (isComplete || !reminderEnabled) return null;
-    const now = new Date();
     const nowHour = now.getHours() + now.getMinutes() / 60;
     if (nowHour >= reminderEndHour) return null;
     const lastTodayLog = logs.find((l) => getDayKey(new Date(l.timestamp)) === todayKey);
@@ -147,7 +173,7 @@ export default function HomeScreen() {
     const displayH = h % 12 || 12;
     const displayM = m === 0 ? "" : `:${String(m).padStart(2, "0")}`;
     return t.nextDrinkAt(`${displayH}${displayM} ${period}`);
-  }, [isComplete, reminderEnabled, logs, todayKey, reminderIntervalHours, reminderStartHour, reminderEndHour, t]);
+  }, [isComplete, reminderEnabled, logs, todayKey, reminderIntervalHours, reminderStartHour, reminderEndHour, t, now]);
 
   const pageBackground = isComplete ? "#FFFBEB" : "#F8FAFC";
   const heroBackground = isComplete ? "#FEF3C7" : "#ECFEFF";
@@ -160,7 +186,7 @@ export default function HomeScreen() {
   const heroSummary = isComplete ? "#B45309" : "#0E7490";
 
   const weeklyData = React.useMemo(() => {
-    const start = startOfDay(addDays(new Date(), -6));
+    const start = startOfDay(addDays(now, -6));
     return Array.from({ length: 7 }, (_, index) => {
       const day = addDays(start, index);
       const dayKey = getDayKey(day);
@@ -169,7 +195,7 @@ export default function HomeScreen() {
         value: dailyTotals[dayKey] ?? 0,
       };
     });
-  }, [dailyTotals, language]);
+  }, [dailyTotals, language, now]);
 
   const weeklyPaceMl = React.useMemo(
     () => weeklyData.reduce((sum, item) => sum + item.value, 0) / weeklyData.length,
